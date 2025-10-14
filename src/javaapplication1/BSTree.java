@@ -9,6 +9,54 @@ public class BSTree {
         this.root = null;
     }
 
+    void rotateLeft(BSTreeNode pivotNode) {
+        if (pivotNode == null || pivotNode.rightChild == null) return;
+
+        BSTreeNode newParent = pivotNode.rightChild;
+        BSTreeNode leftSubtreeOfNewParent = newParent.leftChild;
+
+        newParent.parent = pivotNode.parent;
+        if (pivotNode.parent == null) {
+            root = newParent;
+        } else if (pivotNode.parent.leftChild == pivotNode) {
+            pivotNode.parent.leftChild = newParent;
+        } else {
+            pivotNode.parent.rightChild = newParent;
+        }
+
+        pivotNode.rightChild = leftSubtreeOfNewParent;
+        if (leftSubtreeOfNewParent != null) {
+            leftSubtreeOfNewParent.parent = pivotNode;
+        }
+
+        newParent.leftChild = pivotNode;
+        pivotNode.parent = newParent;
+    }
+
+    void rotateRight(BSTreeNode pivotNode) {
+        if (pivotNode == null || pivotNode.leftChild == null) return;
+
+        BSTreeNode newParent = pivotNode.leftChild;
+        BSTreeNode rightSubtreeOfNewParent = newParent.rightChild;
+
+        newParent.parent = pivotNode.parent;
+        if (pivotNode.parent == null) {
+            root = newParent;
+        } else if (pivotNode.parent.leftChild == pivotNode) {
+            pivotNode.parent.leftChild = newParent;
+        } else {
+            pivotNode.parent.rightChild = newParent;
+        }
+
+        pivotNode.leftChild = rightSubtreeOfNewParent;
+        if (rightSubtreeOfNewParent != null) {
+            rightSubtreeOfNewParent.parent = pivotNode;
+        }
+
+        newParent.rightChild = pivotNode;
+        pivotNode.parent = newParent;
+    }
+
     public void insert(BSTreeNodeData newData) {
         TryFindRecord searchResult = tryFind(newData);
 
@@ -38,9 +86,8 @@ public class BSTree {
             
 
         }
-
-
     }
+
     enum ChildSide {
         RIGHT, LEFT;
     }
