@@ -9,6 +9,55 @@ public class BSTree {
         this.root = null;
     }
 
+    public void delete(BSTreeNodeData data) {
+        TryFindRecord result = tryFind(data);
+
+        if(result.found) {
+            delete(result.searchStoppedAtNode);
+        }
+    }
+
+    private void delete(BSTreeNode node) {
+        if (node == null) return;
+
+        if (node.leftChild == null && node.rightChild == null) {
+            
+            if (node.parent == null) {
+                root = null;
+            } else if (node.parent.leftChild == node) {
+                node.parent.leftChild = null;
+            } else {
+                node.parent.rightChild = null;
+            }
+
+        } else if (node.leftChild == null || node.rightChild == null) {
+            
+            BSTreeNode child = (node.leftChild != null) ? node.leftChild : node.rightChild;
+
+            if (node.parent == null) {
+                root = child;
+            } else if (node.parent.leftChild == node) {
+                node.parent.leftChild = child;
+            } else {
+                node.parent.rightChild = child;
+            }
+
+            if (child != null) {
+                child.parent = node.parent;
+            }
+
+        } else {
+            BSTreeNode successor = node.rightChild;
+            while (successor.leftChild != null) {
+                successor = successor.leftChild;
+            }
+            
+            node.data = successor.data;
+          
+            delete(successor);
+        }
+    }
+
     void rotateLeft(BSTreeNode pivotNode) {
         if (pivotNode == null || pivotNode.rightChild == null) return;
 
@@ -57,11 +106,12 @@ public class BSTree {
         pivotNode.parent = newParent;
     }
 
+
     public void insert(BSTreeNodeData newData) {
         TryFindRecord searchResult = tryFind(newData);
 
         if (searchResult.found) {
-            System.out.println("Error! Key is already present in the tree: " + newData);
+            System.out.println("Error - key is already present in the tree: " + newData);
             return;
         }
 
@@ -83,8 +133,6 @@ public class BSTree {
                 default:
                     break;
             }
-            
-
         }
     }
 
@@ -108,14 +156,14 @@ public class BSTree {
             if (comparisonResult > 0) {
 
                 if (currentNode.rightChild == null) {
-                    return new TryFindRecord(false, currentNode, ChildSide.RIGHT);    
+                    return new TryFindRecord(false, currentNode, ChildSide.LEFT);    
                 }
 
                 currentNode = currentNode.rightChild;
              } else if (comparisonResult < 0) {
 
                 if (currentNode.leftChild == null) {
-                    return new TryFindRecord(false, currentNode, ChildSide.LEFT);    
+                    return new TryFindRecord(false, currentNode, ChildSide.RIGHT);    
                 }
                 currentNode = currentNode.leftChild;
              } else if (comparisonResult == 0) {
@@ -131,6 +179,18 @@ public class BSTree {
             return record.searchStoppedAtNode.data;
         }
         return null;
+    }
+    
+    public void inorderTraversal(java.util.function.Consumer<BSTreeNodeData> action) {
+        inorderTraversal(root, action);
+    }
+    
+    private void inorderTraversal(BSTreeNode node, java.util.function.Consumer<BSTreeNodeData> action) {
+        if (node != null) {
+            inorderTraversal(node.leftChild, action);
+            action.accept(node.data);
+            inorderTraversal(node.rightChild, action);
+        }
     }
     
 }
