@@ -2,7 +2,7 @@ package javaapplication1;
 
 class PersonInfo implements BSTreeNodeData {
 
-    private Double accountSavings;
+    public Double accountSavings;
 
     public String name;
 

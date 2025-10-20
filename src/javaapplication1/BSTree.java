@@ -3,21 +3,27 @@ package javaapplication1;
 
 public class BSTree {
 
-    private BSTreeNode root;
+    protected BSTreeNode root;
 
     public BSTree() {
         this.root = null;
     }
 
-    public void delete(BSTreeNodeData data) {
-        TryFindRecord result = tryFind(data);
-
-        if(result.found) {
-            delete(result.searchStoppedAtNode);
-        }
+    public void insert(BSTreeNodeData newData) {
+        insert(newData, null);
     }
 
-    private void delete(BSTreeNode node) {
+    public void delete(BSTreeNodeData data) {
+
+        TryFindRecord result = tryFind(data, null);
+
+        if(result.found()) {
+            delete(result.searchStoppedAtNode());
+        }
+        
+    }
+
+    protected void delete(BSTreeNode node) {
         if (node == null) return;
 
         if (node.leftChild == null && node.rightChild == null) {
@@ -58,7 +64,7 @@ public class BSTree {
         }
     }
 
-    void rotateLeft(BSTreeNode pivotNode) {
+    protected void rotateLeft(BSTreeNode pivotNode) {
         if (pivotNode == null || pivotNode.rightChild == null) return;
 
         BSTreeNode newParent = pivotNode.rightChild;
@@ -82,7 +88,7 @@ public class BSTree {
         pivotNode.parent = newParent;
     }
 
-    void rotateRight(BSTreeNode pivotNode) {
+    protected void rotateRight(BSTreeNode pivotNode) {
         if (pivotNode == null || pivotNode.leftChild == null) return;
 
         BSTreeNode newParent = pivotNode.leftChild;
@@ -105,25 +111,24 @@ public class BSTree {
         newParent.rightChild = pivotNode;
         pivotNode.parent = newParent;
     }
+    
+    protected void insert(BSTreeNodeData newData, java.util.function.Consumer<BSTreeNode> operation) {
+        TryFindRecord searchResult = tryFind(newData, operation);
 
-
-    public void insert(BSTreeNodeData newData) {
-        TryFindRecord searchResult = tryFind(newData);
-
-        if (searchResult.found) {
+        if (searchResult.found()) {
             System.out.println("Error - key is already present in the tree: " + newData);
             return;
         }
 
         if (root == null) {
-            root = new BSTreeNode();
+            root = createNode();
             root.data = newData;
         } else {
-            BSTreeNode newChild = new BSTreeNode();
-            BSTreeNode searchStoppedAtNode = searchResult.searchStoppedAtNode;
+            BSTreeNode newChild = createNode();
+            BSTreeNode searchStoppedAtNode = searchResult.searchStoppedAtNode();
             newChild.data = newData;
             newChild.parent = searchStoppedAtNode;
-            switch (searchResult.side) {
+            switch (searchResult.side()) {
                 case LEFT:
                     searchStoppedAtNode.leftChild = newChild;        
                     break;
@@ -139,9 +144,9 @@ public class BSTree {
     enum ChildSide {
         RIGHT, LEFT;
     }
-    record TryFindRecord(boolean found, BSTreeNode searchStoppedAtNode, ChildSide side) {}
-
-    private TryFindRecord tryFind(BSTreeNodeData key){
+    public record TryFindRecord(boolean found, BSTreeNode searchStoppedAtNode, ChildSide side) {}
+    
+    protected TryFindRecord tryFind(BSTreeNodeData key, java.util.function.Consumer<BSTreeNode> operation){
 
         if (root == null) {
             return new TryFindRecord(false, null, null);
@@ -150,6 +155,9 @@ public class BSTree {
         BSTreeNode currentNode = root;
 
         while (true) {
+            if (operation != null) {
+                operation.accept(currentNode);
+            }
 
             int comparisonResult = currentNode.data.compare(key);
 
@@ -174,9 +182,9 @@ public class BSTree {
     }
 
     public BSTreeNodeData find(BSTreeNodeData key){
-        TryFindRecord record = tryFind(key);
-        if(record.found) {
-            return record.searchStoppedAtNode.data;
+        TryFindRecord record = tryFind(key, null);
+        if(record.found()) {
+            return record.searchStoppedAtNode().data;
         }
         return null;
     }
@@ -185,12 +193,39 @@ public class BSTree {
         inorderTraversal(root, action);
     }
     
-    private void inorderTraversal(BSTreeNode node, java.util.function.Consumer<BSTreeNodeData> action) {
+    protected void inorderTraversal(BSTreeNode node, java.util.function.Consumer<BSTreeNodeData> action) {
         if (node != null) {
             inorderTraversal(node.leftChild, action);
             action.accept(node.data);
             inorderTraversal(node.rightChild, action);
         }
+    }
+    
+    protected BSTreeNode createNode() {
+        return new BSTreeNode();
+    }
+    
+    public int getHeight() {
+        return getHeight(root);
+    }
+    
+    protected int getHeight(BSTreeNode node) {
+        if (node == null) {
+            return -1;
+        }
+        return 1 + Math.max(getHeight(node.leftChild), getHeight(node.rightChild));
+    }
+    
+    public boolean isEmpty() {
+        return root == null;
+    }
+    
+    protected BSTreeNode getRoot() {
+        return root;
+    }
+    
+    protected void setRoot(BSTreeNode newRoot) {
+        this.root = newRoot;
     }
     
 }
