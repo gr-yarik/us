@@ -16,6 +16,11 @@ class PersonInfo implements BSTreeNodeData {
         return accountSavings.compareTo(valueToCompare);
     }
 
+    @Override public String toString() {
+        String displayName = name == null ? "<unknown>" : name;
+        return displayName + " : $" + String.format("%,.2f", accountSavings);
+    }
+
 }
 
 public class main {
@@ -39,20 +44,18 @@ public class main {
             System.out.println("No person found with 10,000 savings");
         }
         
-        tree.get
-
-        
-//        
-//        System.out.println("\n=== Range Search Results ===");
-//        PersonInfo minKey = new PersonInfo(null, 1_000.0);
-//        PersonInfo maxKey = new PersonInfo(null, 50_000.0);
-//        
-//        java.util.List<BSTreeNodeData> rangeResults = tree.findInRange(minKey, maxKey);
-//        System.out.println("People with savings between 1,000 and 50,000:");
-//        for (BSTreeNodeData data : rangeResults) {
-//            PersonInfo person = (PersonInfo) data;
-//            System.out.println("- " + person.name + ": $" + person.accountSavings);
-//        }
+        tree.printTree();
+       
+       System.out.println("\n=== Range Search Results ===");
+       PersonInfo minKey = new PersonInfo(null, 1_000.0);
+       PersonInfo maxKey = new PersonInfo(null, 50_000.0);
+       
+       java.util.List<BSTreeNodeData> rangeResults = tree.findInRange(minKey, maxKey);
+       System.out.println("People with savings between 1,000 and 50,000:");
+       for (BSTreeNodeData data : rangeResults) {
+           PersonInfo person = (PersonInfo) data;
+           System.out.println("- " + person.name + ": $" + person.accountSavings);
+       }
 //
 //        System.out.println("\n=== Testing AVLTree Range Search ===");
 //        AVLTree avlTree = new AVLTree();

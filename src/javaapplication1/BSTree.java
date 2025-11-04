@@ -258,6 +258,7 @@ public class BSTree {
         return getHeight(root);
     }
     
+
     protected int getHeight(BSTreeNode startingAtNode) {
         if (startingAtNode == null) {
             return -1;
@@ -324,69 +325,53 @@ public class BSTree {
         this.root = newRoot;
     }
     
-    
     public List<BSTreeNodeData> findInRange(BSTreeNodeData minKey, BSTreeNodeData maxKey) {
         List<BSTreeNodeData> results = new ArrayList<>();
+
         if (root == null) {
             return results;
         }
-    
-        BSTreeNode current = findMinimum(root);
-        
-        while (current != null) {
-            int minComparison = current.data.compare(minKey);
-            int maxComparison = current.data.compare(maxKey);
-            
-            if (minComparison >= 0 && maxComparison <= 0) {
-                results.add(current.data);
-            }
-            
-            if (maxComparison > 0) {
-                break;
-            }
-            
-            if (current.rightChild != null) {
-                current = current.rightChild;
-                while (current.leftChild != null) {
-                    current = current.leftChild;
-                }
-            } else {
-                BSTreeNode parent = current.parent;
-                
-                while (parent != null && current == parent.rightChild) {
-                    current = parent;
-                    parent = parent.parent;
-                }
-                
-                current = parent;
-            }
+
+        TryFindRecord searchResult = tryFind(minKey, null);
+
+        BSTreeNode startNode = searchResult.searchStoppedAtNode();
+
+        if(searchResult.found() == false) {
+            startNode = startNode.parent;
         }
+        
+        try {
+            inorderTraversal(startNode, data -> {
+                if (data.compare(minKey) >= 0 && data.compare(maxKey) <= 0 ) {
+                    results.add(data);
+                } else {
+                  //  throw new StopTraversalException();
+            }
+        });
+        } catch (StopTraversalException ignored) {
+           
+        }
+
     
         return results;
     }
-    
-    public BSTreeNodeData findMin() {
-        if (root == null) {
-            return null;
-        }
-        
-        BSTreeNode current = root;
-        while (current.leftChild != null) {
-            current = current.leftChild;
-        }
-        return current.data;
+
+    private static class StopTraversalException extends RuntimeException {}
+   
+    public void printTree() {
+        printTree(root, "", true);
     }
-    
-    public BSTreeNodeData findMax() {
-        if (root == null) {
-            return null;
+
+    private void printTree(BSTreeNode node, String prefix, boolean isLeft) {
+        if (node == null) {
+            return;
         }
-        
-        BSTreeNode current = root;
-        while (current.rightChild != null) {
-            current = current.rightChild;
+        if (node.rightChild != null) {
+            printTree(node.rightChild, prefix + (isLeft ? "│   " : "    "), false);
         }
-        return current.data;
+        System.out.println(prefix + (isLeft ? "└── " : "┌── ") + node.data);
+        if (node.leftChild != null) {
+            printTree(node.leftChild, prefix + (isLeft ? "    " : "│   "), true);
+        }
     }
-    
 }
