@@ -114,9 +114,25 @@ public class AVLTree extends BSTree {
     private boolean isBalanced(AVLTreeNode node) {
         if (node == null) return true;
         
-        return node.isBalanced() && 
-               isBalanced((AVLTreeNode) node.leftChild) && 
-               isBalanced((AVLTreeNode) node.rightChild);
+        Stack<AVLTreeNode> stack = new Stack<>();
+        stack.push(node);
+        
+        while (!stack.isEmpty()) {
+            AVLTreeNode current = stack.pop();
+            
+            if (!current.isBalanced()) {
+                return false;
+            }
+            
+            if (current.leftChild != null) {
+                stack.push((AVLTreeNode) current.leftChild);
+            }
+            if (current.rightChild != null) {
+                stack.push((AVLTreeNode) current.rightChild);
+            }
+        }
+        
+        return true;
     }
     
 }

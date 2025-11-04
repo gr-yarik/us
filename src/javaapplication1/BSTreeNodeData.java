@@ -2,6 +2,6 @@ package javaapplication1;
 
 interface BSTreeNodeData {
    
-    int compare(BSTreeNodeData otherNode);
+    int compare(BSTreeNodeData otherData);
     
 }

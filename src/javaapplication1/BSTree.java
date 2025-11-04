@@ -1,6 +1,10 @@
 
 package javaapplication1;
 
+import java.util.List;
+import java.util.ArrayList;
+import java.util.function.Consumer;
+
 public class BSTree {
 
     protected BSTreeNode root;
@@ -19,6 +23,8 @@ public class BSTree {
 
         if(result.found()) {
             delete(result.searchStoppedAtNode());
+        } else {
+            System.out.println("Could not delete: " + data);
         }
         
     }
@@ -53,13 +59,8 @@ public class BSTree {
             }
 
         } else {
-            BSTreeNode successor = node.rightChild;
-            while (successor.leftChild != null) {
-                successor = successor.leftChild;
-            }
-            
+            BSTreeNode successor = findMinimum(node.rightChild);
             node.data = successor.data;
-          
             delete(successor);
         }
     }
@@ -112,7 +113,7 @@ public class BSTree {
         pivotNode.parent = newParent;
     }
     
-    protected void insert(BSTreeNodeData newData, java.util.function.Consumer<BSTreeNode> operation) {
+    protected void insert(BSTreeNodeData newData, Consumer<BSTreeNode> operation) {
         TryFindRecord searchResult = tryFind(newData, operation);
 
         if (searchResult.found()) {
@@ -146,7 +147,7 @@ public class BSTree {
     }
     public record TryFindRecord(boolean found, BSTreeNode searchStoppedAtNode, ChildSide side) {}
     
-    protected TryFindRecord tryFind(BSTreeNodeData key, java.util.function.Consumer<BSTreeNode> operation){
+    protected TryFindRecord tryFind(BSTreeNodeData key, Consumer<BSTreeNode> operation){
 
         if (root == null) {
             return new TryFindRecord(false, null, null);
@@ -162,18 +163,15 @@ public class BSTree {
             int comparisonResult = currentNode.data.compare(key);
 
             if (comparisonResult > 0) {
-
-                if (currentNode.rightChild == null) {
+                if (currentNode.leftChild == null) {
                     return new TryFindRecord(false, currentNode, ChildSide.LEFT);    
                 }
-
-                currentNode = currentNode.rightChild;
+                currentNode = currentNode.leftChild;
              } else if (comparisonResult < 0) {
-
-                if (currentNode.leftChild == null) {
+                if (currentNode.rightChild == null) {
                     return new TryFindRecord(false, currentNode, ChildSide.RIGHT);    
                 }
-                currentNode = currentNode.leftChild;
+                currentNode = currentNode.rightChild;
              } else if (comparisonResult == 0) {
                 return new TryFindRecord(true, currentNode, null);
              }
@@ -186,18 +184,69 @@ public class BSTree {
         if(record.found()) {
             return record.searchStoppedAtNode().data;
         }
+        System.out.println("Key not found: " + key);
         return null;
     }
     
-    public void inorderTraversal(java.util.function.Consumer<BSTreeNodeData> action) {
+    public void inorderTraversal(Consumer<BSTreeNodeData> action) {
         inorderTraversal(root, action);
     }
     
-    protected void inorderTraversal(BSTreeNode node, java.util.function.Consumer<BSTreeNodeData> action) {
-        if (node != null) {
-            inorderTraversal(node.leftChild, action);
-            action.accept(node.data);
-            inorderTraversal(node.rightChild, action);
+    protected BSTreeNode findMinimum(BSTreeNode startingAt) {
+
+        BSTreeNode current = startingAt == null ? root : startingAt;
+ 
+        while(true) {
+            if (current.leftChild != null) {
+                current = current.leftChild;
+            } else {
+                break;
+            }
+        }
+        
+        return current;
+    }
+
+    protected BSTreeNode findMaximum(BSTreeNode startingAt) {
+
+        BSTreeNode current = startingAt == null ? root : startingAt;
+ 
+        while(true) {
+            if (current.rightChild != null) {
+                current = current.rightChild;
+            } else {
+                break;
+            }
+        }
+        
+        return current;
+    }
+
+    protected void inorderTraversal(BSTreeNode node, Consumer<BSTreeNodeData> action) {
+        if (node == null) {
+            return;
+        }
+
+        BSTreeNode current = findMinimum(node);
+        
+        while (current != null) {
+            action.accept(current.data);
+            
+            if (current.rightChild != null) {
+                current = current.rightChild;
+                while (current.leftChild != null) {
+                    current = current.leftChild;
+                }
+            } else {
+                BSTreeNode parent = current.parent;
+                
+                while (parent != null && current == parent.rightChild) {
+                    current = parent;
+                    parent = parent.parent;
+                }
+                
+                current = parent;
+            }
         }
     }
     
@@ -209,11 +258,58 @@ public class BSTree {
         return getHeight(root);
     }
     
-    protected int getHeight(BSTreeNode node) {
-        if (node == null) {
+    protected int getHeight(BSTreeNode startingAtNode) {
+        if (startingAtNode == null) {
             return -1;
         }
-        return 1 + Math.max(getHeight(node.leftChild), getHeight(node.rightChild));
+
+        int maxDepth = 0;
+        int depth = 0;
+
+        BSTreeNode current = startingAtNode;
+        BSTreeNode previous = null;
+
+        while (current != null) {
+            if (previous == current.parent) {
+                if (current.leftChild != null) {
+                    previous = current;
+                    current = current.leftChild;
+                    depth++;
+                    continue;
+                } else if (current.rightChild != null) {
+                    previous = current;
+                    current = current.rightChild;
+                    depth++;
+                    continue;
+                } else {
+                    if (depth > maxDepth) {
+                        maxDepth = depth;
+                    }
+                    previous = current;
+                    current = current.parent;
+                    depth--;
+                    continue;
+                }
+            } else if (previous == current.leftChild) {
+                if (current.rightChild != null) {
+                    previous = current;
+                    current = current.rightChild;
+                    depth++;
+                    continue;
+                } else {
+                    previous = current;
+                    current = current.parent;
+                    depth--;
+                    continue;
+                }
+            } else {
+                previous = current;
+                current = current.parent;
+                depth--;
+            }
+        }
+
+        return maxDepth;
     }
     
     public boolean isEmpty() {
@@ -226,6 +322,71 @@ public class BSTree {
     
     protected void setRoot(BSTreeNode newRoot) {
         this.root = newRoot;
+    }
+    
+    
+    public List<BSTreeNodeData> findInRange(BSTreeNodeData minKey, BSTreeNodeData maxKey) {
+        List<BSTreeNodeData> results = new ArrayList<>();
+        if (root == null) {
+            return results;
+        }
+    
+        BSTreeNode current = findMinimum(root);
+        
+        while (current != null) {
+            int minComparison = current.data.compare(minKey);
+            int maxComparison = current.data.compare(maxKey);
+            
+            if (minComparison >= 0 && maxComparison <= 0) {
+                results.add(current.data);
+            }
+            
+            if (maxComparison > 0) {
+                break;
+            }
+            
+            if (current.rightChild != null) {
+                current = current.rightChild;
+                while (current.leftChild != null) {
+                    current = current.leftChild;
+                }
+            } else {
+                BSTreeNode parent = current.parent;
+                
+                while (parent != null && current == parent.rightChild) {
+                    current = parent;
+                    parent = parent.parent;
+                }
+                
+                current = parent;
+            }
+        }
+    
+        return results;
+    }
+    
+    public BSTreeNodeData findMin() {
+        if (root == null) {
+            return null;
+        }
+        
+        BSTreeNode current = root;
+        while (current.leftChild != null) {
+            current = current.leftChild;
+        }
+        return current.data;
+    }
+    
+    public BSTreeNodeData findMax() {
+        if (root == null) {
+            return null;
+        }
+        
+        BSTreeNode current = root;
+        while (current.rightChild != null) {
+            current = current.rightChild;
+        }
+        return current.data;
     }
     
 }

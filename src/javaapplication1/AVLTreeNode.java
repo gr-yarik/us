@@ -16,34 +16,39 @@ public class AVLTreeNode extends BSTreeNode {
         this.balanceFactor = balanceFactor;
     }
     
-    public void incrementBalanceFactor() {
-        if (balanceFactor < 2) {
-            balanceFactor++;
-        }
+    
+    public void updateBalanceFactor() {
+        int leftHeight = getHeightIterative((AVLTreeNode) leftChild);
+        int rightHeight = getHeightIterative((AVLTreeNode) rightChild);
+        balanceFactor = (byte) (rightHeight - leftHeight);
     }
     
-    public void decrementBalanceFactor() {
-        if (balanceFactor > -2) {
-            balanceFactor--;
-        }
-    }
-    
-    public int getHeight() {
-        return getHeight(this);
-    }
-    
-    private int getHeight(AVLTreeNode node) {
+    private int getHeightIterative(AVLTreeNode node) {
         if (node == null) {
             return -1;
         }
-        return 1 + Math.max(getHeight((AVLTreeNode) node.leftChild), 
-                           getHeight((AVLTreeNode) node.rightChild));
-    }
-    
-    public void updateBalanceFactor() {
-        int leftHeight = (leftChild == null) ? -1 : ((AVLTreeNode) leftChild).getHeight();
-        int rightHeight = (rightChild == null) ? -1 : ((AVLTreeNode) rightChild).getHeight();
-        balanceFactor = (byte) (rightHeight - leftHeight);
+        
+        java.util.Queue<AVLTreeNode> queue = new java.util.LinkedList<>();
+        queue.offer(node);
+        int height = -1;
+        
+        while (!queue.isEmpty()) {
+            int levelSize = queue.size();
+            height++;
+            
+            for (int i = 0; i < levelSize; i++) {
+                AVLTreeNode current = queue.poll();
+                
+                if (current.leftChild != null) {
+                    queue.offer((AVLTreeNode) current.leftChild);
+                }
+                if (current.rightChild != null) {
+                    queue.offer((AVLTreeNode) current.rightChild);
+                }
+            }
+        }
+        
+        return height;
     }
     
     public boolean isBalanced() {
