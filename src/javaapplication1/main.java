@@ -1,4 +1,5 @@
 package javaapplication1;
+import java.util.List;
 
 class PersonInfo implements BSTreeNodeData {
 
@@ -18,7 +19,7 @@ class PersonInfo implements BSTreeNodeData {
 
     @Override public String toString() {
         String displayName = name == null ? "<unknown>" : name;
-        return displayName + " : $" + String.format("%,.2f", accountSavings);
+        return displayName ;//+ " : $" + String.format("%,.2f", accountSavings);
     }
 
 }
@@ -29,28 +30,49 @@ public class main {
         System.out.println("=== Testing BSTree Range Search ===");
         BSTree tree = new BSTree();
        
-        tree.insert(new PersonInfo("Yaroslav", 1_000.0));
-        tree.insert(new PersonInfo("Martin", 1.0));
+        tree.insert(new PersonInfo("Yaro", 1_000.0));
+        tree.insert(new PersonInfo("Mato", 1.0));
         tree.insert(new PersonInfo("Vlad", 100_000_000.0));        
-        tree.insert(new PersonInfo("Andrew", 10_000.0));
-        tree.insert(new PersonInfo("Sarah", 5_000.0));
-        tree.insert(new PersonInfo("John", 50_000.0));
+        tree.insert(new PersonInfo("Andy", 10_000.0));
+        tree.insert(new PersonInfo("Sara", 5_000.0));
+        tree.insert(new PersonInfo("Jon", 50_000.0));
+        tree.insert(new PersonInfo("Ken", 500.0));
+        tree.insert(new PersonInfo("Jack", 900.0));
+        tree.insert(new PersonInfo("Sam", 400.0));
 
-        PersonInfo entryToFind = new PersonInfo(null, 10_000.0);
-        BSTreeNodeData found = tree.find(entryToFind);
-        if (found != null) {
-            System.out.println("Found person with 10,000 savings: " + ((PersonInfo)found).name);
-        } else {
-            System.out.println("No person found with 10,000 savings");
-        }
+
+
+        PersonInfo entryToFind = new PersonInfo(null, 400.0);
+
+
+        // BSTreeNodeData found = tree.find(entryToFind);
+        // if (found != null) {
+        //     System.out.println("Found person with 10,000 savings: " + ((PersonInfo)found).name);
+        // } else {
+        //     System.out.println("No person found with 10,000 savings");
+        // }
         
-        tree.printTree();
+       tree.printTree();
+    
+    //    tree.inorderTraversal(data -> {
+    //     PersonInfo p = (PersonInfo) data;
+    //     System.out.println(p.name + " : $" + String.format("%,.2f", p.accountSavings));
+    //     return true; // continue traversing
+    // }
+    // );
+
+        // tree.inorderFromInclusive(entryToFind, data -> {
+        //     PersonInfo p = (PersonInfo) data;
+        //     System.out.println(p.name + " : $" + String.format("%,.2f", p.accountSavings));
+        //     return true; // continue traversing
+        // });
+
        
-       System.out.println("\n=== Range Search Results ===");
-       PersonInfo minKey = new PersonInfo(null, 1_000.0);
+    //    System.out.println("\n=== Range Search Results ===");
+       PersonInfo minKey = new PersonInfo(null, -6.0);
        PersonInfo maxKey = new PersonInfo(null, 50_000.0);
        
-       java.util.List<BSTreeNodeData> rangeResults = tree.findInRange(minKey, maxKey);
+       List<BSTreeNodeData> rangeResults = tree.findInRange(minKey, maxKey);
        System.out.println("People with savings between 1,000 and 50,000:");
        for (BSTreeNodeData data : rangeResults) {
            PersonInfo person = (PersonInfo) data;

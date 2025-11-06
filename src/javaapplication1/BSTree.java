@@ -1,9 +1,9 @@
 
 package javaapplication1;
-
 import java.util.List;
 import java.util.ArrayList;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public class BSTree {
 
@@ -188,10 +188,6 @@ public class BSTree {
         return null;
     }
     
-    public void inorderTraversal(Consumer<BSTreeNodeData> action) {
-        inorderTraversal(root, action);
-    }
-    
     protected BSTreeNode findMinimum(BSTreeNode startingAt) {
 
         BSTreeNode current = startingAt == null ? root : startingAt;
@@ -222,7 +218,11 @@ public class BSTree {
         return current;
     }
 
-    protected void inorderTraversal(BSTreeNode node, Consumer<BSTreeNodeData> action) {
+    public void inorderTraversal(Predicate<BSTreeNodeData> action) {
+        inorderTraversal(root, action);
+    }
+
+    protected void inorderTraversal(BSTreeNode node, Predicate<BSTreeNodeData> action) {
         if (node == null) {
             return;
         }
@@ -230,7 +230,10 @@ public class BSTree {
         BSTreeNode current = findMinimum(node);
         
         while (current != null) {
-            action.accept(current.data);
+            boolean shouldContinue = action.test(current.data);
+            if (!shouldContinue) {
+                return;
+            }
             
             if (current.rightChild != null) {
                 current = current.rightChild;
@@ -248,6 +251,31 @@ public class BSTree {
                 current = parent;
             }
         }
+    }
+    
+    public List<BSTreeNodeData> findInRange(BSTreeNodeData minKey, BSTreeNodeData maxKey) {
+        List<BSTreeNodeData> results = new ArrayList<>();
+
+        if (root == null) {
+            return results;
+        }
+
+        TryFindRecord searchResult = tryFind(minKey, null);
+        BSTreeNode startNode = searchResult.searchStoppedAtNode();
+
+        inorderTraversal(startNode, data -> {
+            if (data.compare(minKey) < 0) {
+                return true; 
+            } 
+            if(data.compare(maxKey) > 0) {
+                return false;
+            }
+            results.add(data);
+            return true;
+            
+        });
+
+        return results;
     }
     
     protected BSTreeNode createNode() {
@@ -324,54 +352,138 @@ public class BSTree {
     protected void setRoot(BSTreeNode newRoot) {
         this.root = newRoot;
     }
-    
-    public List<BSTreeNodeData> findInRange(BSTreeNodeData minKey, BSTreeNodeData maxKey) {
-        List<BSTreeNodeData> results = new ArrayList<>();
 
-        if (root == null) {
-            return results;
-        }
-
-        TryFindRecord searchResult = tryFind(minKey, null);
-
-        BSTreeNode startNode = searchResult.searchStoppedAtNode();
-
-        if(searchResult.found() == false) {
-            startNode = startNode.parent;
-        }
-        
-        try {
-            inorderTraversal(startNode, data -> {
-                if (data.compare(minKey) >= 0 && data.compare(maxKey) <= 0 ) {
-                    results.add(data);
-                } else {
-                  //  throw new StopTraversalException();
-            }
-        });
-        } catch (StopTraversalException ignored) {
-           
-        }
-
-    
-        return results;
-    }
-
-    private static class StopTraversalException extends RuntimeException {}
-   
+    // kody vypisu stromov do konzoly boli vygenerovane pomocou AI
     public void printTree() {
-        printTree(root, "", true);
-    }
-
-    private void printTree(BSTreeNode node, String prefix, boolean isLeft) {
-        if (node == null) {
+        if (root == null) {
+            System.out.println("<empty>");
             return;
         }
-        if (node.rightChild != null) {
-            printTree(node.rightChild, prefix + (isLeft ? "│   " : "    "), false);
-        }
-        System.out.println(prefix + (isLeft ? "└── " : "┌── ") + node.data);
-        if (node.leftChild != null) {
-            printTree(node.leftChild, prefix + (isLeft ? "    " : "│   "), true);
+        AsciiBox box = buildAsciiBox(root);
+        for (String line : box.lines) {
+            System.out.println(line);
         }
     }
+
+    private static final class AsciiBox {
+        java.util.List<String> lines;
+        int width;
+        int height;
+        int middle;
+
+        AsciiBox(java.util.List<String> lines, int width, int height, int middle) {
+            this.lines = lines;
+            this.width = width;
+            this.height = height;
+            this.middle = middle;
+        }
+    }
+
+    private AsciiBox buildAsciiBox(BSTreeNode node) {
+        if (node == null) {
+            return new AsciiBox(new ArrayList<>(), 0, 0, 0);
+        }
+
+        String label = String.valueOf(node.data);
+        AsciiBox left = buildAsciiBox(node.leftChild);
+        AsciiBox right = buildAsciiBox(node.rightChild);
+
+        if (left.width == 0 && right.width == 0) {
+            java.util.List<String> lines = new ArrayList<>();
+            lines.add(label);
+            return new AsciiBox(lines, label.length(), 1, label.length() / 2);
+        }
+
+        if (right.width == 0) {
+            // Only left child
+            int leftMiddle = left.middle;
+            int leftRest = left.width - leftMiddle - 1;
+            String line1 = repeat(' ', leftMiddle + 1) + repeat('_', leftRest) + label;
+            String line2 = repeat(' ', leftMiddle) + '/' + repeat(' ', leftRest + label.length());
+
+            java.util.List<String> merged = mergeLeft(left.lines, label.length());
+            merged.add(0, line2);
+            merged.add(0, line1);
+
+            int width = Math.max(line1.length(), merged.get(2).length());
+            padLinesToWidth(merged, width);
+            return new AsciiBox(merged, width, merged.size(), (left.width + label.length()) / 2);
+        }
+
+        if (left.width == 0) {
+            // Only right child
+            int rightMiddle = right.middle;
+            String line1 = label + repeat('_', rightMiddle) + repeat(' ', right.width - rightMiddle);
+            String line2 = repeat(' ', label.length() + rightMiddle) + '\\' + repeat(' ', right.width - rightMiddle - 1);
+
+            java.util.List<String> merged = mergeRight(right.lines, label.length());
+            merged.add(0, line2);
+            merged.add(0, line1);
+
+            int width = Math.max(line1.length(), merged.get(2).length());
+            padLinesToWidth(merged, width);
+            return new AsciiBox(merged, width, merged.size(), label.length() / 2);
+        }
+
+        // Both children
+        int leftMiddle = left.middle;
+        int rightMiddle = right.middle;
+        String line1 = repeat(' ', leftMiddle + 1) + repeat('_', left.width - leftMiddle - 1) + label
+                + repeat('_', rightMiddle) + repeat(' ', right.width - rightMiddle);
+        String line2 = repeat(' ', leftMiddle) + '/' + repeat(' ', left.width - leftMiddle - 1 + label.length() + rightMiddle)
+                + '\\' + repeat(' ', right.width - rightMiddle - 1);
+
+        java.util.List<String> mergedChildren = mergeBoth(left.lines, right.lines, label.length());
+        mergedChildren.add(0, line2);
+        mergedChildren.add(0, line1);
+
+        int width = Math.max(Math.max(line1.length(), line2.length()), mergedChildren.get(2).length());
+        padLinesToWidth(mergedChildren, width);
+        return new AsciiBox(mergedChildren, width, mergedChildren.size(), left.width + label.length() / 2);
+    }
+
+    private java.util.List<String> mergeLeft(java.util.List<String> leftLines, int labelWidth) {
+        java.util.List<String> merged = new ArrayList<>(leftLines.size());
+        for (String l : leftLines) {
+            merged.add(l + repeat(' ', labelWidth));
+        }
+        return merged;
+    }
+
+    private java.util.List<String> mergeRight(java.util.List<String> rightLines, int labelWidth) {
+        java.util.List<String> merged = new ArrayList<>(rightLines.size());
+        for (String r : rightLines) {
+            merged.add(repeat(' ', labelWidth) + r);
+        }
+        return merged;
+    }
+
+    private java.util.List<String> mergeBoth(java.util.List<String> leftLines, java.util.List<String> rightLines, int labelWidth) {
+        int height = Math.max(leftLines.size(), rightLines.size());
+        java.util.List<String> merged = new ArrayList<>(height);
+        for (int i = 0; i < height; i++) {
+            String leftLine = i < leftLines.size() ? leftLines.get(i) : repeat(' ', leftLines.get(0).length());
+            String rightLine = i < rightLines.size() ? rightLines.get(i) : repeat(' ', rightLines.get(0).length());
+            merged.add(leftLine + repeat(' ', labelWidth) + rightLine);
+        }
+        return merged;
+    }
+
+    private void padLinesToWidth(java.util.List<String> lines, int width) {
+        for (int i = 0; i < lines.size(); i++) {
+            String s = lines.get(i);
+            if (s.length() < width) {
+                lines.set(i, s + repeat(' ', width - s.length()));
+            }
+        }
+    }
+
+    private String repeat(char ch, int count) {
+        if (count <= 0) return "";
+        char[] arr = new char[count];
+        java.util.Arrays.fill(arr, ch);
+        return new String(arr);
+    }
+    
+   
 }
