@@ -1,7 +1,7 @@
 package javaapplication1;
 import java.util.List;
 
-class PersonInfo implements BSTreeNodeData {
+class PersonInfo implements TreeNodeData {
 
     public Double accountSavings;
 
@@ -12,7 +12,7 @@ class PersonInfo implements BSTreeNodeData {
         this.accountSavings = accountSavings; 
     }
     
-    @Override public int compare(BSTreeNodeData otherKey) {
+    @Override public int compare(TreeNodeData otherKey) {
         Double valueToCompare = ((PersonInfo)otherKey).accountSavings;
         return accountSavings.compareTo(valueToCompare);
     }
@@ -72,9 +72,9 @@ public class main {
        PersonInfo minKey = new PersonInfo(null, -6.0);
        PersonInfo maxKey = new PersonInfo(null, 50_000.0);
        
-       List<BSTreeNodeData> rangeResults = tree.findInRange(minKey, maxKey);
+       List<TreeNodeData> rangeResults = tree.findInRange(minKey, maxKey);
        System.out.println("People with savings between 1,000 and 50,000:");
-       for (BSTreeNodeData data : rangeResults) {
+       for (TreeNodeData data : rangeResults) {
            PersonInfo person = (PersonInfo) data;
            System.out.println("- " + person.name + ": $" + person.accountSavings);
        }

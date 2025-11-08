@@ -1,7 +1,5 @@
 package javaapplication1;
 
-import java.util.Stack;
-
 public class AVLTree extends BSTree {
     
     @Override
@@ -10,66 +8,48 @@ public class AVLTree extends BSTree {
     }
     
     @Override
-    public void insert(BSTreeNodeData newData) {
-        Stack<AVLTreeNode> path = new Stack<>();
-        
-        super.insert(newData, node -> path.push((AVLTreeNode) node));
-        
-        updateBalanceFactorsAndRebalance(path);
-    }
-    
-    protected void insert(BSTreeNodeData newData, java.util.function.Consumer<BSTreeNode> operation) {
-        Stack<AVLTreeNode> path = new Stack<>();
-        
-        super.insert(newData, node -> {
-            path.push((AVLTreeNode) node);
-            if (operation != null) {
-                operation.accept(node);
-            }
-        });
-        
-        updateBalanceFactorsAndRebalance(path);
+    public void insert(TreeNodeData newData) {
+        AVLTreeNode newNode = (AVLTreeNode) super.insert(newData, null);
+        updateBalanceFactorsAndRebalance(newNode);
     }
     
     @Override
-    public void delete(BSTreeNodeData data) {
-        Stack<AVLTreeNode> path = new Stack<>();
+    public void delete(TreeNodeData data) {
         
-        TryFindRecord result = tryFind(data, node -> path.push((AVLTreeNode) node));
+        TryFindRecord result = tryFind(data, null);
         
         if (!result.found()) {
+            System.out.println("Didn't find a node with this key ");
             return;
         }
         
-        delete(result.searchStoppedAtNode());
+        AVLTreeNode nodeToDelete = (AVLTreeNode) result.searchStoppedAtNode();
+        delete(nodeToDelete);
         
-        if (!path.isEmpty()) {
-            path.pop();
-        }
-        updateBalanceFactorsAndRebalance(path);
+        updateBalanceFactorsAndRebalance(nodeToDelete);
     }
     
-    
-    
-    private void updateBalanceFactorsAndRebalance(Stack<AVLTreeNode> path) {
-        while (!path.isEmpty()) {
-            AVLTreeNode node = path.pop();
-            node.updateBalanceFactor();
+    private void updateBalanceFactorsAndRebalance(AVLTreeNode newNode) {
+        AVLTreeNode currentNode = newNode;
+        while (currentNode != null) {
+            currentNode.updateBalanceFactor();
             
-            if (!node.isBalanced()) {
-                rebalance(node);
+            if (!currentNode.isBalanced()) {
+                rebalance(currentNode);
                 break;
             }
             
-            if (node.getBalanceFactor() == 0) {
+            if (currentNode.balanceFactor == 0) {
                 break;
             }
+            
+            currentNode = currentNode.getParent();
         }
     }
     
     private void rebalance(AVLTreeNode node) {
         if (node.isRightHeavy()) {
-            AVLTreeNode rightChild = (AVLTreeNode) node.rightChild;
+            AVLTreeNode rightChild = node.getRightChild();
             if (rightChild.isLeftHeavy()) {
                 rotateRight(rightChild);
                 rotateLeft(node);
@@ -77,7 +57,7 @@ public class AVLTree extends BSTree {
                 rotateLeft(node);
             }
         } else if (node.isLeftHeavy()) {
-            AVLTreeNode leftChild = (AVLTreeNode) node.leftChild;
+            AVLTreeNode leftChild = node.getLeftChild();
             if (leftChild.isRightHeavy()) {
                 rotateLeft(leftChild);
                 rotateRight(node);
@@ -89,22 +69,26 @@ public class AVLTree extends BSTree {
     
     @Override
     protected void rotateLeft(BSTreeNode pivotNode) {
-        if (pivotNode == null || pivotNode.rightChild == null) return;
+        if (pivotNode == null || pivotNode.getRightChild() == null) return;
         
         super.rotateLeft(pivotNode);
         
         ((AVLTreeNode) pivotNode).updateBalanceFactor();
-        ((AVLTreeNode) pivotNode.parent).updateBalanceFactor();
+        if (pivotNode.getParent() != null) {
+            ((AVLTreeNode) pivotNode.getParent()).updateBalanceFactor();
+        }
     }
     
     @Override
     protected void rotateRight(BSTreeNode pivotNode) {
-        if (pivotNode == null || pivotNode.leftChild == null) return;
+        if (pivotNode == null || pivotNode.getLeftChild() == null) return;
         
         super.rotateRight(pivotNode);
         
         ((AVLTreeNode) pivotNode).updateBalanceFactor();
-        ((AVLTreeNode) pivotNode.parent).updateBalanceFactor();
+        if (pivotNode.getParent() != null) {
+            ((AVLTreeNode) pivotNode.getParent()).updateBalanceFactor();
+        }
     }
     
     public boolean isBalanced() {
@@ -114,25 +98,9 @@ public class AVLTree extends BSTree {
     private boolean isBalanced(AVLTreeNode node) {
         if (node == null) return true;
         
-        Stack<AVLTreeNode> stack = new Stack<>();
-        stack.push(node);
-        
-        while (!stack.isEmpty()) {
-            AVLTreeNode current = stack.pop();
-            
-            if (!current.isBalanced()) {
-                return false;
-            }
-            
-            if (current.leftChild != null) {
-                stack.push((AVLTreeNode) current.leftChild);
-            }
-            if (current.rightChild != null) {
-                stack.push((AVLTreeNode) current.rightChild);
-            }
-        }
-        
-        return true;
+        return node.isBalanced() && 
+               isBalanced(node.getLeftChild()) && 
+               isBalanced(node.getRightChild());
     }
     
 }

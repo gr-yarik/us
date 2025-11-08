@@ -12,7 +12,7 @@ public class Tester {
     private static final int MIN_MAX_OPERATIONS = 2_000_000; // 2 million min/max operations each as required
     
     // Simple data class for integer keys
-    static class IntegerData implements BSTreeNodeData {
+    static class IntegerData implements TreeNodeData {
         private int value;
         
         public IntegerData(int value) {
@@ -24,7 +24,7 @@ public class Tester {
         }
         
         @Override
-        public int compare(BSTreeNodeData other) {
+        public int compare(TreeNodeData other) {
             return Integer.compare(this.value, ((IntegerData) other).value);
         }
         
@@ -164,8 +164,8 @@ public class Tester {
             IntegerData minKey = remainingData.get(startIndex);
             IntegerData maxKey = remainingData.get(endIndex);
             
-            List<BSTreeNodeData> bstResults = bstTree.findInRange(minKey, maxKey);
-            List<BSTreeNodeData> avlResults = avlTree.findInRange(minKey, maxKey);
+            List<TreeNodeData> bstResults = bstTree.findInRange(minKey, maxKey);
+            List<TreeNodeData> avlResults = avlTree.findInRange(minKey, maxKey);
             
             bstTotalIntervalResults += bstResults.size();
             avlTotalIntervalResults += avlResults.size();
@@ -369,7 +369,7 @@ public class Tester {
             IntegerData minKey = remainingData.get(startIndex);
             IntegerData maxKey = remainingData.get(endIndex);
             
-            List<BSTreeNodeData> avlResults = avlTree.findInRange(minKey, maxKey);
+            List<TreeNodeData> avlResults = avlTree.findInRange(minKey, maxKey);
             avlTotalIntervalResults += avlResults.size();
             
             // Verify we found at least 500 elements (for debugging)
