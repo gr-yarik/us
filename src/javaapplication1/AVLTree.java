@@ -10,7 +10,9 @@ public class AVLTree extends BSTree {
     @Override
     public void insert(TreeNodeData newData) {
         AVLTreeNode newNode = (AVLTreeNode) super.insert(newData, null);
-        updateBalanceFactorsAndRebalance(newNode);
+        if (newNode != null) {
+            updateBalanceFactorsAndRebalance(newNode);
+        }
     }
     
     @Override
@@ -24,33 +26,95 @@ public class AVLTree extends BSTree {
         }
         
         AVLTreeNode nodeToDelete = (AVLTreeNode) result.searchStoppedAtNode();
-        delete(nodeToDelete);
+        deleteAVL(nodeToDelete);
+    }
+    
+    private void deleteAVL(AVLTreeNode nodeToDelete) {
+        if (nodeToDelete == null) return;
         
-        updateBalanceFactorsAndRebalance(nodeToDelete);
+        DeletionRecord result = deleteNode(nodeToDelete);
+        
+        if (result == null || result.side() == null) {
+            return;
+        }
+        
+        AVLTreeNode parent = (AVLTreeNode) result.parentNode();
+        if (parent != null) {
+            updateBalanceFactorsAndRebalanceAfterDelete(parent, result.side());
+        }
     }
     
     private void updateBalanceFactorsAndRebalance(AVLTreeNode newNode) {
-        AVLTreeNode currentNode = newNode;
+        AVLTreeNode currentNode = newNode.getParent();
+        AVLTreeNode previousNode = newNode;
+        
         while (currentNode != null) {
-            currentNode.updateBalanceFactor();
+            ChildSide side = (currentNode.getLeftChild() == previousNode) ? ChildSide.LEFT : ChildSide.RIGHT;
+            
+            boolean heightIncreased = currentNode.updateBalanceFactorIncremental(side);
             
             if (!currentNode.isBalanced()) {
                 rebalance(currentNode);
                 break;
             }
             
-            if (currentNode.balanceFactor == 0) {
+            if (!heightIncreased) {
                 break;
             }
             
+            previousNode = currentNode;
             currentNode = currentNode.getParent();
+        }
+    }
+    
+    private void updateBalanceFactorsAndRebalanceAfterDelete(AVLTreeNode startNode, ChildSide deletedSide) {
+        AVLTreeNode currentNode = startNode;
+        ChildSide side = deletedSide;
+        
+        while (currentNode != null) {
+            boolean heightDecreased = currentNode.updateBalanceFactorDecremental(side);
+            
+            if (!currentNode.isBalanced()) {
+                AVLTreeNode parent = currentNode.getParent();
+                
+                ChildSide wasOnSide = null;
+                if (parent != null) {
+                    wasOnSide = (parent.getLeftChild() == currentNode) ? ChildSide.LEFT : ChildSide.RIGHT;
+                }
+                
+                rebalance(currentNode);
+                
+                if (parent != null) {
+                    boolean parentHeightDecreased = parent.updateBalanceFactorDecremental(wasOnSide);
+                    
+                    currentNode = parent;
+                    side = wasOnSide;
+                    
+                    if (!parentHeightDecreased) {
+                        break;
+                    }
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            
+            if (!heightDecreased) {
+                break;
+            }
+            
+            AVLTreeNode parent = currentNode.getParent();
+            if (parent != null) {
+                side = (parent.getLeftChild() == currentNode) ? ChildSide.LEFT : ChildSide.RIGHT;
+            }
+            currentNode = parent;
         }
     }
     
     private void rebalance(AVLTreeNode node) {
         if (node.isRightHeavy()) {
             AVLTreeNode rightChild = node.getRightChild();
-            if (rightChild.isLeftHeavy()) {
+            if (rightChild != null && rightChild.isLeftHeavy()) {
                 rotateRight(rightChild);
                 rotateLeft(node);
             } else {
@@ -58,7 +122,7 @@ public class AVLTree extends BSTree {
             }
         } else if (node.isLeftHeavy()) {
             AVLTreeNode leftChild = node.getLeftChild();
-            if (leftChild.isRightHeavy()) {
+            if (leftChild != null && leftChild.isRightHeavy()) {
                 rotateLeft(leftChild);
                 rotateRight(node);
             } else {
@@ -71,11 +135,20 @@ public class AVLTree extends BSTree {
     protected void rotateLeft(BSTreeNode pivotNode) {
         if (pivotNode == null || pivotNode.getRightChild() == null) return;
         
+        AVLTreeNode pivot = (AVLTreeNode) pivotNode;
+        AVLTreeNode rightChild = pivot.getRightChild();
+        
+        byte pivotBF = pivot.balanceFactor;
+        byte rightBF = rightChild.balanceFactor;
+        
         super.rotateLeft(pivotNode);
         
-        ((AVLTreeNode) pivotNode).updateBalanceFactor();
-        if (pivotNode.getParent() != null) {
-            ((AVLTreeNode) pivotNode.getParent()).updateBalanceFactor();
+        if (rightBF >= 0) {
+            pivot.balanceFactor = (byte) (pivotBF - 1 - rightBF);
+            rightChild.balanceFactor = (byte) (rightBF - 1);
+        } else {
+            pivot.balanceFactor = (byte) (pivotBF - 1);
+            rightChild.balanceFactor = (byte) (rightBF - 1 + pivotBF);
         }
     }
     
@@ -83,11 +156,20 @@ public class AVLTree extends BSTree {
     protected void rotateRight(BSTreeNode pivotNode) {
         if (pivotNode == null || pivotNode.getLeftChild() == null) return;
         
+        AVLTreeNode pivot = (AVLTreeNode) pivotNode;
+        AVLTreeNode leftChild = pivot.getLeftChild();
+        
+        byte pivotBF = pivot.balanceFactor;
+        byte leftBF = leftChild.balanceFactor;
+        
         super.rotateRight(pivotNode);
         
-        ((AVLTreeNode) pivotNode).updateBalanceFactor();
-        if (pivotNode.getParent() != null) {
-            ((AVLTreeNode) pivotNode.getParent()).updateBalanceFactor();
+        if (leftBF <= 0) {
+            pivot.balanceFactor = (byte) (pivotBF + 1 - leftBF);
+            leftChild.balanceFactor = (byte) (leftBF + 1);
+        } else {
+            pivot.balanceFactor = (byte) (pivotBF + 1);
+            leftChild.balanceFactor = (byte) (leftBF + 1 + pivotBF);
         }
     }
     
@@ -101,6 +183,24 @@ public class AVLTree extends BSTree {
         return node.isBalanced() && 
                isBalanced(node.getLeftChild()) && 
                isBalanced(node.getRightChild());
+    }
+    
+    public boolean verifyAllBalanceFactors() {
+        return verifyAllBalanceFactors((AVLTreeNode) root);
+    }
+    
+    private boolean verifyAllBalanceFactors(AVLTreeNode node) {
+        if (node == null) return true;
+        
+        boolean nodeBalanced = node.isBalanced();
+        if (!nodeBalanced) {
+            System.out.println("Balance factor violation: node with data " + node.getData() + 
+                             " has balance factor " + node.balanceFactor);
+        }
+        
+        return nodeBalanced && 
+               verifyAllBalanceFactors(node.getLeftChild()) && 
+               verifyAllBalanceFactors(node.getRightChild());
     }
     
 }

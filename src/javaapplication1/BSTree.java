@@ -24,45 +24,61 @@ public class BSTree {
         if(result.found()) {
             delete(result.searchStoppedAtNode());
         } else {
-            System.out.println("Could not delete: " + data);
+            // Suppress verbose output during testing
+            // System.out.println("Could not delete: " + data);
         }
         
     }
 
-    protected void delete(BSTreeNode node) {
-        if (node == null) return;
+    public record DeletionRecord(ChildSide side, BSTreeNode parentNode) {}
+    
+    protected DeletionRecord deleteNode(BSTreeNode node) {
+        if (node == null) return null;
+        
+        BSTreeNode parent = node.getParent();
+        ChildSide deletedSide = null;
+        
+        if (parent != null) {
+            deletedSide = (parent.getLeftChild() == node) ? ChildSide.LEFT : ChildSide.RIGHT;
+        }
 
         if (node.getLeftChild() == null && node.getRightChild() == null) {
-            
-            if (node.getParent() == null) {
+            if (parent == null) {
                 root = null;
-            } else if (node.getParent().getLeftChild() == node) {
-                node.getParent().setLeftChild(null);
+                return null;
+            } else if (deletedSide == ChildSide.LEFT) {
+                parent.setLeftChild(null);
             } else {
-                node.getParent().setRightChild(null);
+                parent.setRightChild(null);
             }
+            return new DeletionRecord(deletedSide, parent);
 
         } else if (node.getLeftChild() == null || node.getRightChild() == null) {
-            
             BSTreeNode child = (node.getLeftChild() != null) ? node.getLeftChild() : node.getRightChild();
 
-            if (node.getParent() == null) {
+            if (parent == null) {
                 root = child;
-            } else if (node.getParent().getLeftChild() == node) {
-                node.getParent().setLeftChild(child);
+                return null;
+            } else if (deletedSide == ChildSide.LEFT) {
+                parent.setLeftChild(child);
             } else {
-                node.getParent().setRightChild(child);
+                parent.setRightChild(child);
             }
 
             if (child != null) {
-                child.setParent(node.getParent());
+                child.setParent(parent);
             }
+            return new DeletionRecord(deletedSide, parent);
 
         } else {
             BSTreeNode successor = findMinimum(node.getRightChild());
             node.setData(successor.getData());
-            delete(successor);
+            return deleteNode(successor);
         }
+    }
+    
+    protected void delete(BSTreeNode node) {
+        deleteNode(node);
     }
 
     protected void rotateLeft(BSTreeNode pivotNode) {
@@ -201,7 +217,8 @@ public class BSTree {
         if(record.found()) {
             return record.searchStoppedAtNode().getData();
         }
-        System.out.println("Key not found: " + key);
+        // Suppress verbose output during testing
+        // System.out.println("Key not found: " + key);
         return null;
     }
     
@@ -233,6 +250,22 @@ public class BSTree {
         }
         
         return current;
+    }
+    
+    public TreeNodeData findMin() {
+        if (root == null) {
+            return null;
+        }
+        BSTreeNode minNode = findMinimum(null);
+        return minNode != null ? minNode.getData() : null;
+    }
+    
+    public TreeNodeData findMax() {
+        if (root == null) {
+            return null;
+        }
+        BSTreeNode maxNode = findMaximum(null);
+        return maxNode != null ? maxNode.getData() : null;
     }
 
     public void inorderTraversal(Predicate<TreeNodeData> action) {
@@ -370,7 +403,6 @@ public class BSTree {
         this.root = newRoot;
     }
 
-    // kody dole pre vypis stromu do konzoly boli vygenerovane pomocou AI
     public void printTree() {
         if (root == null) {
             System.out.println("<empty>");
@@ -412,7 +444,6 @@ public class BSTree {
         }
 
         if (right.width == 0) {
-            // Only left child
             int leftMiddle = left.middle;
             int leftRest = left.width - leftMiddle - 1;
             String line1 = repeat(' ', leftMiddle + 1) + repeat('_', leftRest) + label;
@@ -428,7 +459,6 @@ public class BSTree {
         }
 
         if (left.width == 0) {
-            // Only right child
             int rightMiddle = right.middle;
             String line1 = label + repeat('_', rightMiddle) + repeat(' ', right.width - rightMiddle);
             String line2 = repeat(' ', label.length() + rightMiddle) + '\\' + repeat(' ', right.width - rightMiddle - 1);
@@ -442,7 +472,6 @@ public class BSTree {
             return new AsciiBox(merged, width, merged.size(), label.length() / 2);
         }
 
-        // Both children
         int leftMiddle = left.middle;
         int rightMiddle = right.middle;
         String line1 = repeat(' ', leftMiddle + 1) + repeat('_', left.width - leftMiddle - 1) + label

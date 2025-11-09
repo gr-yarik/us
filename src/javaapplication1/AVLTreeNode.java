@@ -4,7 +4,6 @@ public class AVLTreeNode extends BSTreeNode {
     
     byte balanceFactor = 0;
     
-    // Override getters to return AVLTreeNode type
     @Override
     public AVLTreeNode getLeftChild() {
         return (AVLTreeNode) super.getLeftChild();
@@ -20,7 +19,6 @@ public class AVLTreeNode extends BSTreeNode {
         return (AVLTreeNode) super.getParent();
     }
     
-    // Override setters to accept AVLTreeNode type
     public void setLeftChild(AVLTreeNode leftChild) {
         super.setLeftChild(leftChild);
     }
@@ -78,5 +76,31 @@ public class AVLTreeNode extends BSTreeNode {
         int leftHeight = getHeightIterative(getLeftChild());
         int rightHeight = getHeightIterative(getRightChild());
         balanceFactor = (byte) (rightHeight - leftHeight);
+    }
+    
+    public boolean updateBalanceFactorIncremental(BSTree.ChildSide side) {
+        byte oldBF = balanceFactor;
+        
+        if (side == BSTree.ChildSide.LEFT) {
+            balanceFactor--;
+        } else {
+            balanceFactor++;
+        }
+        
+        return (oldBF == 0 && Math.abs(balanceFactor) == 1) || 
+               (Math.abs(oldBF) == 1 && Math.abs(balanceFactor) == 2);
+    }
+    
+    public boolean updateBalanceFactorDecremental(BSTree.ChildSide side) {
+        byte oldBF = balanceFactor;
+        
+        if (side == BSTree.ChildSide.LEFT) {
+            balanceFactor++;
+        } else {
+            balanceFactor--;
+        }
+        
+        return (oldBF == 0 && Math.abs(balanceFactor) == 1) || 
+               (Math.abs(oldBF) == 1 && balanceFactor == 0);
     }
 }

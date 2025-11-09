@@ -18,7 +18,7 @@ class PersonInfo implements TreeNodeData {
     }
 
     @Override public String toString() {
-        String displayName = name == null ? "<unknown>" : name;
+        String displayName = name == null ? "<unknown>" : name+""+accountSavings;
         return displayName ;//+ " : $" + String.format("%,.2f", accountSavings);
     }
 
@@ -28,23 +28,29 @@ public class main {
     public static void main(String[] args) {
 
         System.out.println("=== Testing BSTree Range Search ===");
-        BSTree tree = new BSTree();
+        //BSTree tree = new BSTree();
        
+        AVLTree tree = new AVLTree();
+
         tree.insert(new PersonInfo("Yaro", 1_000.0));
         tree.insert(new PersonInfo("Mato", 1.0));
         tree.insert(new PersonInfo("Vlad", 100_000_000.0));        
         tree.insert(new PersonInfo("Andy", 10_000.0));
+       // tree.printTree();
         tree.insert(new PersonInfo("Sara", 5_000.0));
+     //   tree.printTree();
         tree.insert(new PersonInfo("Jon", 50_000.0));
         tree.insert(new PersonInfo("Ken", 500.0));
         tree.insert(new PersonInfo("Jack", 900.0));
         tree.insert(new PersonInfo("Sam", 400.0));
 
-
+        
 
         PersonInfo entryToFind = new PersonInfo(null, 400.0);
+        PersonInfo entryToRemove = new PersonInfo(null, 10_000.0);
 
-
+        tree.printTree();
+        tree.delete(entryToRemove);
         // BSTreeNodeData found = tree.find(entryToFind);
         // if (found != null) {
         //     System.out.println("Found person with 10,000 savings: " + ((PersonInfo)found).name);
@@ -69,7 +75,7 @@ public class main {
 
        
     //    System.out.println("\n=== Range Search Results ===");
-       PersonInfo minKey = new PersonInfo(null, -6.0);
+       PersonInfo minKey = new PersonInfo(null, .0);
        PersonInfo maxKey = new PersonInfo(null, 50_000.0);
        
        List<TreeNodeData> rangeResults = tree.findInRange(minKey, maxKey);

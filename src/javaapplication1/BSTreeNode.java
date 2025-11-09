@@ -8,7 +8,6 @@ public class BSTreeNode {
 
     private TreeNodeData data;
     
-    // Getters
     public BSTreeNode getLeftChild() {
         return leftChild;
     }
@@ -25,7 +24,6 @@ public class BSTreeNode {
         return data;
     }
     
-    // Setters
     public void setLeftChild(BSTreeNode leftChild) {
         this.leftChild = leftChild;
     }
