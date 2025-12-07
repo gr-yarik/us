@@ -8,14 +8,12 @@ import java.io.IOException;
 
 public class Block<T extends StorableRecord> {
     
-    private int validBlockCount;
-    private T[] records;
-    private int recordSize;
-    private int blockingFactor;
-    private int blockSize;
+    protected int validBlockCount;
+    protected T[] records;
+    protected int recordSize;
+    protected int blockingFactor;
+    protected int blockSize;
     
-    
-    @SuppressWarnings("unchecked")
     public Block(int blockingFactor, int blockSize, Class<T> recordClass) {
         this.blockingFactor = blockingFactor;
         this.blockSize = blockSize;
@@ -42,7 +40,6 @@ public class Block<T extends StorableRecord> {
     }
     
     public T[] getAllRecordSlots() {
-        @SuppressWarnings("unchecked")
         T[] allSlots = (T[]) java.lang.reflect.Array.newInstance(
             records.getClass().getComponentType(), blockingFactor);
         System.arraycopy(records, 0, allSlots, 0, blockingFactor);
@@ -94,7 +91,6 @@ public class Block<T extends StorableRecord> {
         return validBlockCount == 0;
     }
     
-
     public byte[] ToByteArray() {
         ByteArrayOutputStream hlpByteArrayOutputStream = new ByteArrayOutputStream();
         DataOutputStream hlpOutStream = new DataOutputStream(hlpByteArrayOutputStream);

@@ -21,10 +21,8 @@ public class AutoTester {
         System.out.println("========================================\n");
         
         try {
-            // Clean up any existing test files
             cleanupTestFiles();
             
-            // Run all tests in sequence, passing data between them
             test1_InstantiateHeap();
             
             Person[] persons = test2_GeneratePersons();
@@ -46,7 +44,6 @@ public class AutoTester {
             
             heap.close();
             
-            // Print summary
             printSummary();
             
         } catch (Exception e) {
@@ -64,7 +61,6 @@ public class AutoTester {
         System.out.println("✓ Cleanup complete\n");
     }
     
-    // Test 1: Instantiate Heap
     private static void test1_InstantiateHeap() {
         System.out.println("Test 1: Instantiating Heap with file 'autotest', Person class, blockSize 512");
         try {
@@ -77,7 +73,6 @@ public class AutoTester {
         System.out.println();
     }
     
-    // Test 2: Generate 10,000 Person objects
     private static Person[] test2_GeneratePersons() {
         System.out.println("Test 2: Generating " + TOTAL_PERSONS + " Person objects");
         Person[] persons = new Person[TOTAL_PERSONS];
@@ -113,7 +108,6 @@ public class AutoTester {
         return persons;
     }
     
-    // Test 3: Insert 300 persons and track block numbers
     private static Map<Integer, List<Person>> test3_Insert300Persons(Person[] persons) {
         System.out.println("Test 3: Inserting " + INSERT_COUNT + " persons and tracking block numbers");
         Map<Integer, List<Person>> blockMap = new HashMap<>();
@@ -139,11 +133,9 @@ public class AutoTester {
         return blockMap;
     }
     
-    // Test 4: Heap goes out of scope and reinstantiate
     private static Heap<Person> test4_ReinstantiateHeap() {
         System.out.println("Test 4: Reinstantiating Heap from existing files");
         try {
-            // Heap from previous test goes out of scope here
             Heap<Person> heap = new Heap<>(HEAP_FILE, METADATA_FILE, Person.class);
             pass("Test 4 passed: Heap reinstantiated successfully");
             System.out.println();
@@ -155,7 +147,6 @@ public class AutoTester {
         }
     }
     
-    // Test 5: Verify all records
     private static void test5_VerifyAllRecords(Heap<Person> heap, Map<Integer, List<Person>> blockMap) {
         System.out.println("Test 5: Verifying all records against helper structure");
         int verified = 0;
@@ -192,14 +183,12 @@ public class AutoTester {
         System.out.println();
     }
     
-    // Test 6: Delete records from blocks 5, 6, 7 and 3 records from block 2
     private static void test6_DeleteRecords(Heap<Person> heap, Map<Integer, List<Person>> blockMap) {
         System.out.println("Test 6: Deleting records from blocks 5, 6, 7 and 3 records from block 2");
         int deleted = 0;
         int failed = 0;
         
         try {
-            // Delete all records from blocks 5, 6, 7
             for (int blockNum : new int[]{5, 6, 7}) {
                 if (blockMap.containsKey(blockNum)) {
                     List<Person> personsToDelete = new ArrayList<>(blockMap.get(blockNum));
@@ -218,7 +207,6 @@ public class AutoTester {
                 }
             }
             
-            // Delete 3 records from block 2
             if (blockMap.containsKey(2) && blockMap.get(2).size() >= 3) {
                 List<Person> personsToDelete = blockMap.get(2).subList(0, 3);
                 List<Person> copy = new ArrayList<>(personsToDelete);
@@ -247,7 +235,6 @@ public class AutoTester {
         System.out.println();
     }
     
-    // Test 7: Add one new person and verify it returns block 2
     private static void test7_AddPersonAndVerifyBlock2(Heap<Person> heap) {
         System.out.println("Test 7: Adding one new person and verifying it returns block 2");
         try {
@@ -270,10 +257,9 @@ public class AutoTester {
         System.out.println();
     }
     
-    // Test 8: Random operations (10,000 operations: 40% insert, 30% delete, 30% get)
     private static void test8_RandomOperations(Heap<Person> heap, Person[] allPersons, Map<Integer, List<Person>> blockMap) {
         System.out.println("Test 8: Running 10,000 random operations (40% insert, 30% delete, 30% get)");
-        Random random = new Random(42); // Fixed seed for reproducibility
+        Random random = new Random(42);
         int operations = 10000;
         int insertOps = 0;
         int deleteOps = 0;
@@ -283,7 +269,6 @@ public class AutoTester {
         int getSuccess = 0;
         int failures = 0;
         
-        // Track all inserted persons for random operations
         List<Person> insertedPersons = new ArrayList<>();
         Map<Integer, List<Person>> operationBlockMap = new HashMap<>(blockMap);
         
@@ -292,7 +277,6 @@ public class AutoTester {
                 double rand = random.nextDouble();
                 
                 if (rand < 0.4) {
-                    // INSERT (40%)
                     insertOps++;
                     Person person = allPersons[INSERT_COUNT + insertedPersons.size()];
                     if (INSERT_COUNT + insertedPersons.size() < TOTAL_PERSONS) {
@@ -302,7 +286,6 @@ public class AutoTester {
                             operationBlockMap.putIfAbsent(blockNumber, new ArrayList<>());
                             operationBlockMap.get(blockNumber).add(person);
                             
-                            // Verify insertion immediately
                             Person found = heap.get(blockNumber, person);
                             if (found != null && personsEqual(person, found)) {
                                 insertSuccess++;
@@ -320,13 +303,10 @@ public class AutoTester {
                         }
                     }
                 } else if (rand < 0.7) {
-                    // DELETE (30%)
                     deleteOps++;
                     if (!insertedPersons.isEmpty() || !operationBlockMap.isEmpty()) {
-                        // Try to delete from inserted persons first
                         if (!insertedPersons.isEmpty() && random.nextDouble() < 0.5) {
                             Person personToDelete = insertedPersons.remove(random.nextInt(insertedPersons.size()));
-                            // Find which block it's in
                             for (Map.Entry<Integer, List<Person>> entry : operationBlockMap.entrySet()) {
                                 if (entry.getValue().remove(personToDelete)) {
                                     int blockNumber = entry.getKey();
@@ -345,7 +325,6 @@ public class AutoTester {
                                 }
                             }
                         } else if (!operationBlockMap.isEmpty()) {
-                            // Delete from existing blocks
                             List<Integer> blocks = new ArrayList<>(operationBlockMap.keySet());
                             int blockNumber = blocks.get(random.nextInt(blocks.size()));
                             List<Person> personsInBlock = operationBlockMap.get(blockNumber);
@@ -366,7 +345,6 @@ public class AutoTester {
                         }
                     }
                 } else {
-                    // GET (30%)
                     getOps++;
                     if (!operationBlockMap.isEmpty()) {
                         List<Integer> blocks = new ArrayList<>(operationBlockMap.keySet());
@@ -409,7 +387,6 @@ public class AutoTester {
         System.out.println();
     }
     
-    // Helper method to compare two Person objects
     private static boolean personsEqual(Person p1, Person p2) {
         if (p1 == null || p2 == null) {
             return p1 == p2;
