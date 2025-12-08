@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import LinearHashing.Bucket;
+import LinearHashing.BucketHeap;
+
 public class LinearHash<T extends StorableRecord> {
     
     private static final int M = 2;
@@ -124,7 +127,7 @@ public class LinearHash<T extends StorableRecord> {
         bucketHeap.collectAllRecords(splitPointer, allRecords);
         
         @SuppressWarnings("unchecked")
-        Class<T> recordClass = (Class<T>) bucketToSplit.getAllRecordSlots()[0].getClass();
+        Class<T> recordClass = (Class<T>) allRecords.get(0).getClass();
         bucketToSplit = new Bucket<>(
             bucketHeap.getBlockingFactor(),
             bucketHeap.getBlockSize(),
@@ -244,8 +247,12 @@ public class LinearHash<T extends StorableRecord> {
         List<T> allRecords = new ArrayList<>();
         bucketHeap.collectAllRecords(bucketAddress, allRecords);
         
+        if (allRecords.isEmpty()) {
+            return;
+        }
+        
         @SuppressWarnings("unchecked")
-        Class<T> recordClass = (Class<T>) bucket.getAllRecordSlots()[0].getClass();
+        Class<T> recordClass = (Class<T>) allRecords.get(0).getClass();
         bucket = new Bucket<>(
             bucketHeap.getBlockingFactor(),
             bucketHeap.getBlockSize(),

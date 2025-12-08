@@ -1,8 +1,12 @@
-package UnsortedFile;
+package LinearHashing;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+
+import UnsortedFile.LinearHash;
+import UnsortedFile.StorableRecord;
+
 import java.nio.charset.StandardCharsets;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

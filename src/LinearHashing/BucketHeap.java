@@ -1,6 +1,9 @@
-package UnsortedFile;
+package LinearHashing;
 
 import java.io.IOException;
+
+import UnsortedFile.Heap;
+import UnsortedFile.StorableRecord;
 
 public class BucketHeap<T extends StorableRecord> {
     

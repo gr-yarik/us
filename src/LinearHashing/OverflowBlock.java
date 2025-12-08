@@ -1,10 +1,13 @@
-package UnsortedFile;
+package LinearHashing;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import UnsortedFile.Block;
+import UnsortedFile.StorableRecord;
 
 public class OverflowBlock<T extends StorableRecord> extends Block<T> {
     

@@ -20,22 +20,13 @@ public class Block<T extends StorableRecord> {
         this.validBlockCount = 0;
         this.records = (T[]) java.lang.reflect.Array.newInstance(recordClass, blockingFactor);
         
-        try {
-            T templateRecord = recordClass.getDeclaredConstructor().newInstance();
-            this.recordSize = templateRecord.sizeInBytes();
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Cannot instantiate record class to determine size: " + recordClass.getName(), e);
-        }
+        try { 
+            T templateInstance = recordClass.getDeclaredConstructor().newInstance();
+            this.recordSize = templateInstance.sizeInBytes();
+         } catch ( Exception e) {};
     }
     
-    public int getSize() {
-        return blockSize;
-    }
-
     public T getRecord(int index) {
-        if (index < 0 || index >= blockingFactor || index >= validBlockCount) {
-            return null;
-        }
         return records[index];
     }
     
@@ -77,6 +68,7 @@ public class Block<T extends StorableRecord> {
         for (int i = index; i < validBlockCount - 1; i++) {
             records[i] = records[i + 1];
         }
+
         validBlockCount--;
         records[validBlockCount] = null;
         
@@ -97,13 +89,8 @@ public class Block<T extends StorableRecord> {
         try {
             for (int i = 0; i < blockingFactor; i++) {
                 if(i < validBlockCount) {
-                    if (records[i] != null) {
-                        byte[] recordBytes = records[i].ToByteArray();
-                        hlpOutStream.write(recordBytes);
-                    } else {
-                        byte[] emptyRecord = new byte[recordSize];
-                        hlpOutStream.write(emptyRecord);
-                    }
+                    byte[] recordBytes = records[i].ToByteArray();
+                    hlpOutStream.write(recordBytes);
                 } else {
                     byte[] emptyRecord = new byte[recordSize];
                     hlpOutStream.write(emptyRecord);
@@ -113,9 +100,6 @@ public class Block<T extends StorableRecord> {
             
             byte[] result = hlpByteArrayOutputStream.toByteArray();
             
-            if (result.length > blockSize) {
-                throw new IllegalStateException("Block serialization exceeds blockSize: " + result.length + " > " + blockSize);
-            }
             if (result.length < blockSize) {
                 byte[] paddedResult = new byte[blockSize];
                 System.arraycopy(result, 0, paddedResult, 0, result.length);

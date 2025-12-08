@@ -2,6 +2,8 @@ package UnsortedFile;
 
 import java.io.IOException;
 
+import LinearHashing.Bucket;
+
 public class Heap<T extends StorableRecord> {
     
     private int blockSize;     
@@ -180,8 +182,7 @@ public class Heap<T extends StorableRecord> {
                 return null;
             }
             
-            T record = block.getRecord(recordIndex);
-            return record;
+            return block.getRecord(recordIndex);
         } catch (IOException e) {
             throw new RuntimeException("Error reading record from file", e);
         }
@@ -190,10 +191,7 @@ public class Heap<T extends StorableRecord> {
     public boolean delete(int blockNumber, T partialRecord) {
         try {
             Block<T> block = readBlock(blockNumber);
-            if (block == null) {
-                return false;
-            }
-            
+        
             int recordIndex = block.findRecordIndex(partialRecord);
             if (recordIndex == -1) {
                 return false;
@@ -208,11 +206,8 @@ public class Heap<T extends StorableRecord> {
                     blockManager.updateAfterDelete(blockNumber, newValidCount, blockingFactor, blockSize);
                 }
                 
-                if (block.isEmpty()) {
-                    if (!sequentialMode && truncateAtTheEndIfPossible(blockNumber)) {
-                    } else {
-                        writeBlock(blockNumber, block);
-                    }
+                if (block.isEmpty() && !sequentialMode && truncateAtTheEndIfPossible(blockNumber)) {
+                    // Block truncated, no need to write
                 } else {
                     writeBlock(blockNumber, block);
                 }
@@ -283,32 +278,18 @@ public class Heap<T extends StorableRecord> {
     }
     
     public Block<T> readBlock(int blockNumber) throws IOException {
-        long position = (long) blockNumber * blockSize;
-        
-        if (position >= binaryFile.getSize()) {
-            return null;
-        }
-        
-        binaryFile.seek(position);
-        byte[] blockData = binaryFile.read(blockSize);
-        
-        Block<T> block;
-        if (sequentialMode) {
-            block = new Bucket<>(blockingFactor, blockSize, recordClass);
+        if(sequentialMode) {
+            return readBlock(blockNumber, Bucket.class);
         } else {
-            block = new Block<>(blockingFactor, blockSize, recordClass);
+            return readBlock(blockNumber, Block.class);
         }
-        block.FromByteArray(blockData, recordClass);
-        
-        return block;
     }
     
-    @SuppressWarnings("unchecked")
     public <B extends Block<T>> B readBlock(int blockNumber, Class<B> blockClass) throws IOException {
         long position = (long) blockNumber * blockSize;
         
         if (position >= binaryFile.getSize()) {
-            return null;
+            throw new RuntimeException("Passed blockNumber does not exist in the file");
         }
         
         binaryFile.seek(position);
@@ -326,14 +307,6 @@ public class Heap<T extends StorableRecord> {
     
     public void writeBlock(int blockNumber, Block<T> block) throws IOException {
         long position = (long) blockNumber * blockSize;
-        
-        long requiredSize = position + blockSize;
-        long currentSize = binaryFile.getSize();
-        if (requiredSize > currentSize) {
-            binaryFile.seek(currentSize);
-            byte[] padding = new byte[(int)(requiredSize - currentSize)];
-            binaryFile.write(padding);
-        }
         
         binaryFile.seek(position);
         byte[] blockData = block.ToByteArray();
@@ -383,25 +356,15 @@ public class Heap<T extends StorableRecord> {
     }
     
     public void extendToBlockCount(int blockCount) throws IOException {
+        if (!sequentialMode) {
+            throw new UnsupportedOperationException("Cannot be used in classic heap");
+        }
+        
         int currentBlocks = getTotalBlocks();
         if (blockCount > currentBlocks) {
-            long requiredSize = (long) blockCount * blockSize;
-            long currentSize = binaryFile.getSize();
-            
-            if (requiredSize > currentSize) {
-                binaryFile.seek(currentSize);
-                byte[] padding = new byte[(int)(requiredSize - currentSize)];
-                binaryFile.write(padding);
-                
-                for (int i = currentBlocks; i < blockCount; i++) {
-                    Block<T> emptyBlock;
-                    if (sequentialMode) {
-                        emptyBlock = new Bucket<>(blockingFactor, blockSize, recordClass);
-                    } else {
-                        emptyBlock = new Block<>(blockingFactor, blockSize, recordClass);
-                    }
-                    writeBlock(i, emptyBlock);
-                }
+            for (int i = currentBlocks; i < blockCount; i++) {
+                Block<T> emptyBlock = new Bucket<>(blockingFactor, blockSize, recordClass);
+                writeBlock(i, emptyBlock);
             }
         }
     }
