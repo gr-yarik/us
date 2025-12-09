@@ -87,11 +87,6 @@ public class BlockManager {
         partiallyEmptyBlocks.remove(Integer.valueOf(blockIndex));
     }
     
-    public void clearAllBlocks(int blockSize) {
-        emptyBlocks.clear();
-        partiallyEmptyBlocks.clear();
-    }
-    
     public boolean isEmptyBlock(int blockIndex) {
         return emptyBlocks.contains(blockIndex);
     }

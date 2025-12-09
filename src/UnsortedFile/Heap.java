@@ -118,7 +118,7 @@ public class Heap<T extends StorableRecord> {
             boolean added = block.addRecord(instance);
 
             if (!added) {
-                throw new RuntimeException("Could not insert a record. Should not happen.");
+                throw new RuntimeException("Could not insert a record. This should not happen.");
             }
             
             writeBlock(blockNumber, block);
@@ -167,7 +167,8 @@ public class Heap<T extends StorableRecord> {
                     blockManager.updateAfterDelete(blockNumber, newValidCount, blockingFactor, blockSize);
                 }
                 
-                if (block.isEmpty() && !sequentialMode && truncateAtTheEndIfPossible(blockNumber)) {
+                if (block.isEmpty() && !sequentialMode) {
+                    truncateAtTheEndIfPossible();
                 } else {
                     writeBlock(blockNumber, block);
                 }
@@ -201,28 +202,14 @@ public class Heap<T extends StorableRecord> {
         return consecutiveEmptyBlocks;
     }
     
-    private boolean truncateAtTheEndIfPossible(int blockNumber) throws IOException {
+    private void truncateAtTheEndIfPossible() throws IOException {
         long fileSize = binaryFile.getSize();
         int totalBlocks = (int) (fileSize / blockSize);
-        
-        if (totalBlocks == 0) {
-            return false;
-        }
-        
-        if (blockNumber < totalBlocks - 1) {
-            return false;
-        }
         
         int consecutiveEmptyBlocks = countConsecutiveEmptyBlocksAtEnd();
         
         if (consecutiveEmptyBlocks == 0) {
-            return false;
-        }
-        
-        if (consecutiveEmptyBlocks == totalBlocks) {
-            binaryFile.truncate(0);
-            blockManager.clearAllBlocks(blockSize);
-            return true;
+            return;
         }
         
         int newTotalBlocks = totalBlocks - consecutiveEmptyBlocks;
@@ -233,8 +220,6 @@ public class Heap<T extends StorableRecord> {
         for (int i = newTotalBlocks; i < totalBlocks; i++) {
             blockManager.removeBlock(i, blockSize);
         }
-        
-        return true;
     }
     
     public Block<T> readBlock(int blockNumber) throws IOException {
