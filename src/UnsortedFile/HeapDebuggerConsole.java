@@ -14,7 +14,7 @@ public class HeapDebuggerConsole {
     private String heapFilePath;
     private String metadataFilePath;
     private List<BlockInfo> blockInfos;
-    private BlockManager.MetadataResult metadata;
+    private BlockManager blockManager;
     private int blockSize;
     private int blockingFactor;
     
@@ -112,13 +112,8 @@ public class HeapDebuggerConsole {
         System.out.println("\nLoading heap data...");
         
         try {
-            metadata = BlockManager.loadFromFile(metadataFilePath);
-            if (metadata == null) {
-                System.out.println("ERROR: Metadata file is empty or doesn't exist.");
-                return;
-            }
-            
-            blockSize = metadata.blockSize;
+            blockManager = new BlockManager(metadataFilePath);
+            blockSize = blockManager.getBlockSize();
             
             Person templatePerson = new Person();
             int recordSize = templatePerson.sizeInBytes();
@@ -129,8 +124,8 @@ public class HeapDebuggerConsole {
             long fileSize = binaryFile.getSize();
             int totalBlocks = (int) (fileSize / blockSize);
             
-            Set<Integer> emptyBlocks = new HashSet<>(metadata.emptyBlocks);
-            Set<Integer> partiallyEmptyBlocks = new HashSet<>(metadata.partiallyEmptyBlocks);
+            Set<Integer> emptyBlocks = new HashSet<>(blockManager.getEmptyBlocks());
+            Set<Integer> partiallyEmptyBlocks = new HashSet<>(blockManager.getPartiallyEmptyBlocks());
             
             System.out.println("Reading " + totalBlocks + " blocks...");
             

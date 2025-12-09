@@ -10,13 +10,37 @@ public class BlockManager {
     private List<Integer> emptyBlocks;
     private List<Integer> partiallyEmptyBlocks;
     private BinaryFile metadataFile;
+    private String metadataFilePath;
+    private int blockSize;
     
-    public BlockManager(String metadataFilePath, List<Integer> emptyBlocks, List<Integer> partiallyEmptyBlocks) throws IOException {
-        this.emptyBlocks = new ArrayList<>(emptyBlocks);
-        this.partiallyEmptyBlocks = new ArrayList<>(partiallyEmptyBlocks);
-        
+    //used when starting from scratch
+    public BlockManager(String metadataFilePath, int blockSize) throws IOException {
+        this.metadataFilePath = metadataFilePath;
+        this.blockSize = blockSize;
+        this.emptyBlocks = new ArrayList<>();
+        this.partiallyEmptyBlocks = new ArrayList<>();
         this.metadataFile = new BinaryFile(metadataFilePath);
     }
+
+    //used when restoring state
+    public BlockManager(String metadataFilePath) throws IOException {
+        this.metadataFilePath = metadataFilePath;
+        this.metadataFile = new BinaryFile(metadataFilePath);
+        loadFromFile();
+    }
+
+    public int getBlockSize() {
+        return blockSize;
+    }
+    
+    public List<Integer> getEmptyBlocks() {
+        return new ArrayList<>(emptyBlocks);
+    }
+    
+    public List<Integer> getPartiallyEmptyBlocks() {
+        return new ArrayList<>(partiallyEmptyBlocks);
+    }
+
     
     public int getNextPartiallyEmptyBlock() {
         if (partiallyEmptyBlocks.isEmpty()) {
@@ -37,16 +61,16 @@ public class BlockManager {
     }
     
     public void updateAfterInsert(int blockIndex, int validCount, int blockingFactor, int blockSize) {
-        emptyBlocks.remove(Integer.valueOf(blockIndex));
-        partiallyEmptyBlocks.remove(Integer.valueOf(blockIndex));
+        if ((emptyBlocks.remove(Integer.valueOf(blockIndex)) ||
+        partiallyEmptyBlocks.remove(Integer.valueOf(blockIndex))) == false) {
+            throw new RuntimeException("Block " + blockIndex + " was not found in empty or partially empty blocks");
+        }
         
         if (validCount == 0) {
             emptyBlocks.add(blockIndex);
         } else if (validCount < blockingFactor) {
             partiallyEmptyBlocks.add(blockIndex);
         }
-        
-        saveToFile(blockSize);
     }
     
     public void updateAfterDelete(int blockIndex, int validCount, int blockingFactor, int blockSize) {
@@ -58,27 +82,23 @@ public class BlockManager {
         } else if (validCount < blockingFactor) {
             partiallyEmptyBlocks.add(blockIndex);
         }
-        
-        saveToFile(blockSize);
     }
     
     public void removeBlock(int blockIndex, int blockSize) {
         emptyBlocks.remove(Integer.valueOf(blockIndex));
         partiallyEmptyBlocks.remove(Integer.valueOf(blockIndex));
-        saveToFile(blockSize);
     }
     
     public void clearAllBlocks(int blockSize) {
         emptyBlocks.clear();
         partiallyEmptyBlocks.clear();
-        saveToFile(blockSize);
     }
     
     public boolean isEmptyBlock(int blockIndex) {
         return emptyBlocks.contains(blockIndex);
     }
     
-    public void saveToFile(int blockSize) {
+    public void saveToFile() {
         try {
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             java.io.DataOutputStream dos = new java.io.DataOutputStream(baos);
@@ -106,84 +126,34 @@ public class BlockManager {
         }
     }
     
-    public static MetadataResult loadFromFile(String metadataFilePath) throws IOException {
-        BinaryFile metadataFile = new BinaryFile(metadataFilePath);
-        
+    private void loadFromFile() throws IOException {
         if (metadataFile.getSize() == 0) {
-            metadataFile.close();
-            return null;
+            throw new RuntimeException("Metadata file is empty or doesn't exist: " + metadataFilePath);
         }
         
-        try {
-            metadataFile.seek(0);
-            java.io.DataInputStream dis = new java.io.DataInputStream(
-                new java.io.ByteArrayInputStream(metadataFile.read((int)metadataFile.getSize())));
-            
-            int blockSize = dis.readInt();
-            
-            int emptyCount = dis.readInt();
-            List<Integer> emptyBlocks = new ArrayList<>();
-            for (int i = 0; i < emptyCount; i++) {
-                emptyBlocks.add(dis.readInt());
-            }
-            
-            int partialCount = dis.readInt();
-            List<Integer> partiallyEmptyBlocks = new ArrayList<>();
-            for (int i = 0; i < partialCount; i++) {
-                partiallyEmptyBlocks.add(dis.readInt());
-            }
-            
-            return new MetadataResult(blockSize, emptyBlocks, partiallyEmptyBlocks);
-        } finally {
-            metadataFile.close();
-        }
-    }
-    
-    public static void saveToFile(String metadataFilePath, int blockSize, 
-                                   List<Integer> emptyBlocks, List<Integer> partiallyEmptyBlocks) throws IOException {
-        BinaryFile metadataFile = new BinaryFile(metadataFilePath);
-        try {
-            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            java.io.DataOutputStream dos = new java.io.DataOutputStream(baos);
-            
-            dos.writeInt(blockSize);
-            
-            dos.writeInt(emptyBlocks.size());
-            for (int idx : emptyBlocks) {
-                dos.writeInt(idx);
-            }
-            
-            dos.writeInt(partiallyEmptyBlocks.size());
-            for (int idx : partiallyEmptyBlocks) {
-                dos.writeInt(idx);
-            }
-            
-            byte[] data = baos.toByteArray();
-            
-            metadataFile.seek(0);
-            metadataFile.write(data);
-            metadataFile.truncate(data.length);
-        } finally {
-            metadataFile.close();
-        }
-    }
-    
-    public static class MetadataResult {
-        public final int blockSize;
-        public final List<Integer> emptyBlocks;
-        public final List<Integer> partiallyEmptyBlocks;
+        metadataFile.seek(0);
+        java.io.DataInputStream dis = new java.io.DataInputStream(
+            new java.io.ByteArrayInputStream(metadataFile.read((int)metadataFile.getSize())));
         
-        public MetadataResult(int blockSize, List<Integer> emptyBlocks, List<Integer> partiallyEmptyBlocks) {
-            this.blockSize = blockSize;
-            this.emptyBlocks = new ArrayList<>(emptyBlocks);
-            this.partiallyEmptyBlocks = new ArrayList<>(partiallyEmptyBlocks);
+        this.blockSize = dis.readInt();
+        
+        int emptyCount = dis.readInt();
+        this.emptyBlocks = new ArrayList<>();
+        for (int i = 0; i < emptyCount; i++) {
+            this.emptyBlocks.add(dis.readInt());
+        }
+        
+        int partialCount = dis.readInt();
+        this.partiallyEmptyBlocks = new ArrayList<>();
+        for (int i = 0; i < partialCount; i++) {
+            this.partiallyEmptyBlocks.add(dis.readInt());
         }
     }
     
     public void close() throws IOException {
         if (metadataFile != null) {
+            saveToFile();
             metadataFile.close();
         }
     }
 }
-

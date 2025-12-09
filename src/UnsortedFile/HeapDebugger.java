@@ -24,7 +24,7 @@ public class HeapDebugger extends JFrame {
     private JScrollPane detailsScrollPane;
     
     private List<BlockInfo> blockInfos;
-    private BlockManager.MetadataResult metadata;
+    private BlockManager blockManager;
     private int blockSize;
     private int blockingFactor;
     
@@ -158,15 +158,8 @@ public class HeapDebugger extends JFrame {
         }
         
         try {
-            metadata = BlockManager.loadFromFile(metadataPath);
-            if (metadata == null) {
-                JOptionPane.showMessageDialog(this, 
-                    "Metadata file is empty or doesn't exist.", 
-                    "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            
-            blockSize = metadata.blockSize;
+            blockManager = new BlockManager(metadataPath);
+            blockSize = blockManager.getBlockSize();
             
             Person templatePerson = new Person();
             int recordSize = templatePerson.sizeInBytes();
@@ -308,7 +301,7 @@ public class HeapDebugger extends JFrame {
     }
     
     private void displayMetadata(StringBuilder sb) {
-        if (metadata == null) {
+        if (blockManager == null) {
             sb.append("METADATA: Not available\n");
             return;
         }
@@ -322,16 +315,17 @@ public class HeapDebugger extends JFrame {
         sb.append("Record Size:       ").append(recordSize).append(" bytes\n");
         sb.append("\n");
         
+        List<Integer> emptyBlocks = blockManager.getEmptyBlocks();
         sb.append("Empty Blocks List:\n");
         sb.append(repeatString("-", 80)).append("\n");
-        if (metadata.emptyBlocks == null || metadata.emptyBlocks.isEmpty()) {
+        if (emptyBlocks == null || emptyBlocks.isEmpty()) {
             sb.append("  (no empty blocks)\n");
         } else {
-            sb.append("  Count: ").append(metadata.emptyBlocks.size()).append("\n");
+            sb.append("  Count: ").append(emptyBlocks.size()).append("\n");
             sb.append("  Block indices: ");
-            for (int i = 0; i < metadata.emptyBlocks.size(); i++) {
-                sb.append(metadata.emptyBlocks.get(i));
-                if (i < metadata.emptyBlocks.size() - 1) {
+            for (int i = 0; i < emptyBlocks.size(); i++) {
+                sb.append(emptyBlocks.get(i));
+                if (i < emptyBlocks.size() - 1) {
                     sb.append(", ");
                 }
             }
@@ -339,16 +333,17 @@ public class HeapDebugger extends JFrame {
         }
         sb.append("\n");
         
+        List<Integer> partiallyEmptyBlocks = blockManager.getPartiallyEmptyBlocks();
         sb.append("Partially Empty Blocks List:\n");
         sb.append(repeatString("-", 80)).append("\n");
-        if (metadata.partiallyEmptyBlocks == null || metadata.partiallyEmptyBlocks.isEmpty()) {
+        if (partiallyEmptyBlocks == null || partiallyEmptyBlocks.isEmpty()) {
             sb.append("  (no partially empty blocks)\n");
         } else {
-            sb.append("  Count: ").append(metadata.partiallyEmptyBlocks.size()).append("\n");
+            sb.append("  Count: ").append(partiallyEmptyBlocks.size()).append("\n");
             sb.append("  Block indices: ");
-            for (int i = 0; i < metadata.partiallyEmptyBlocks.size(); i++) {
-                sb.append(metadata.partiallyEmptyBlocks.get(i));
-                if (i < metadata.partiallyEmptyBlocks.size() - 1) {
+            for (int i = 0; i < partiallyEmptyBlocks.size(); i++) {
+                sb.append(partiallyEmptyBlocks.get(i));
+                if (i < partiallyEmptyBlocks.size() - 1) {
                     sb.append(", ");
                 }
             }

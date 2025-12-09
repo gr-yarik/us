@@ -13,80 +13,21 @@ public class Heap<T extends StorableRecord> {
     private BinaryFile binaryFile;
     private BlockManager blockManager;
     private boolean sequentialMode;
-
-      public Heap(String pathToFile, int blockSize, Class<T> recordClass) {
-        this(pathToFile, blockSize, recordClass, false, 4);
-    }
-    
-    public Heap(String pathToFile, int blockSize, Class<T> recordClass, boolean sequentialMode) {
-        this(pathToFile, blockSize, recordClass, sequentialMode, sequentialMode ? 12 : 4);
-    }
     
     public Heap(String pathToFile, int blockSize, Class<T> recordClass, boolean sequentialMode, int reservedBytes) {
-        this.blockSize = blockSize; 
         this.recordClass = recordClass;
         this.sequentialMode = sequentialMode;
 
-        try {
-            T templateRecord = recordClass.getDeclaredConstructor().newInstance();
-            this.recordSize = templateRecord.sizeInBytes();
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Cannot instantiate record class to determine size: " + recordClass.getName(), e);
-        }
+        java.io.File heapFile = new java.io.File(pathToFile);
         
-        this.blockingFactor = (int) Math.floor((double) (this.blockSize - reservedBytes) / this.recordSize);
-        
-        if (this.blockingFactor < 1) {
-            throw new IllegalArgumentException("Record size (" + recordSize + ") is larger than Block size (" + blockSize + ")");
-        }
-        
-        try {
-            this.binaryFile = new BinaryFile(pathToFile);
-        } catch (IOException e) {
-            throw new RuntimeException("Cannot open binary file: " + pathToFile, e);
-        }
-        
-        if (!sequentialMode) {
+        if (heapFile.exists()) {
+            String metadataPath = pathToFile + ".meta";
             try {
-                String metadataPath = pathToFile + ".meta";
-                
-                java.util.List<Integer> emptyBlocks = new java.util.ArrayList<>();
-                java.util.List<Integer> partiallyEmptyBlocks = new java.util.ArrayList<>();
-                
-                java.io.File metaFile = new java.io.File(metadataPath);
-                if (!metaFile.exists() || metaFile.length() == 0) {
-                    BlockManager.saveToFile(metadataPath, blockSize, emptyBlocks, partiallyEmptyBlocks);
-                }
-                
-                this.blockManager = new BlockManager(metadataPath, emptyBlocks, partiallyEmptyBlocks);
+                this.blockManager = new BlockManager(metadataPath);
+                this.blockSize = blockManager.getBlockSize();
             } catch (IOException e) {
-                throw new RuntimeException("Cannot initialize block manager: " + pathToFile + ".meta", e);
+                throw new RuntimeException("BlockManager must be instantiated: " + metadataPath, e);
             }
-        } else {
-            this.blockManager = null;
-        }
-    }
-    
-    public Heap(String pathToFile, String metadataFilePath, Class<T> recordClass) {
-        this(pathToFile, metadataFilePath, recordClass, false, 4);
-    }
-    
-    public Heap(String pathToFile, String metadataFilePath, Class<T> recordClass, boolean sequentialMode) {
-        this(pathToFile, metadataFilePath, recordClass, sequentialMode, sequentialMode ? 12 : 4);
-    }
-    
-    public Heap(String pathToFile, String metadataFilePath, Class<T> recordClass, boolean sequentialMode, int reservedBytes) {
-        this.recordClass = recordClass;
-        this.sequentialMode = sequentialMode;
-        this.reservedBytes = reservedBytes;
-        
-        try {
-            BlockManager.MetadataResult metadata = BlockManager.loadFromFile(metadataFilePath);
-            if (metadata == null) {
-                throw new RuntimeException("Metadata file is empty or doesn't exist: " + metadataFilePath);
-            }
-            
-            this.blockSize = metadata.blockSize;
             
             try {
                 T templateRecord = recordClass.getDeclaredConstructor().newInstance();
@@ -101,21 +42,50 @@ public class Heap<T extends StorableRecord> {
                 throw new IllegalArgumentException("Record size (" + recordSize + ") is larger than Block size (" + blockSize + ")");
             }
             
-            this.binaryFile = new BinaryFile(pathToFile);
-            
-            if (!sequentialMode) {
-                this.blockManager = new BlockManager(metadataFilePath, metadata.emptyBlocks, metadata.partiallyEmptyBlocks);
-            } else {
-                this.blockManager = null;
+            try {
+                this.binaryFile = new BinaryFile(pathToFile);
+            } catch (IOException e) {
+                throw new RuntimeException("Cannot open binary file: " + pathToFile, e);
             }
             
-        } catch (IOException e) {
-            throw new RuntimeException("Cannot load heap from metadata file: " + metadataFilePath, e);
-        } catch (Exception e) {
-            throw new RuntimeException("Error initializing heap from metadata", e);
+            if (sequentialMode) {
+                this.blockManager = null;
+            }
+        } else {
+            String metadataPath = pathToFile + ".meta";
+            java.io.File metaFile = new java.io.File(metadataPath);
+            if (metaFile.exists()) {
+                metaFile.delete();
+            }
+            
+            this.blockSize = blockSize;
+            
+            try {
+                T templateRecord = recordClass.getDeclaredConstructor().newInstance();
+                this.recordSize = templateRecord.sizeInBytes();
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Cannot instantiate record class to determine size: " + recordClass.getName(), e);
+            }
+          
+            this.blockingFactor = (int) Math.floor((double) (this.blockSize - reservedBytes) / this.recordSize);
+            
+            if (this.blockingFactor < 1) {
+                throw new IllegalArgumentException("Record size (" + recordSize + ") is larger than Block size (" + blockSize + ")");
+            }
+
+            try {
+                this.binaryFile = new BinaryFile(pathToFile);
+            } catch (IOException e) {
+                throw new RuntimeException("Cannot open binary file: " + pathToFile, e);
+            }
+            
+            try {
+                this.blockManager = new BlockManager(metadataPath, blockSize);
+            } catch (IOException e) {
+                throw new RuntimeException("Cannot initialize block manager: " + metadataPath, e);
+            }
         }
     }
-
 
     public int insert(T instance) {
         if (sequentialMode) {
@@ -127,22 +97,15 @@ public class Heap<T extends StorableRecord> {
             Block<T> block = null;
             
             blockNumber = blockManager.getNextPartiallyEmptyBlock();
+
             if (blockNumber != -1) {
                 block = readBlock(blockNumber);
-                if (block == null || block.isFull()) {
-                    blockNumber = -1;
-                    block = null;
-                }
             }
             
             if (blockNumber == -1) {
                 blockNumber = blockManager.getNextEmptyBlock();
                 if (blockNumber != -1) {
                     block = readBlock(blockNumber);
-                    if (block == null || !block.isEmpty()) {
-                        blockNumber = -1;
-                        block = null;
-                    }
                 }
             }
             
@@ -153,8 +116,9 @@ public class Heap<T extends StorableRecord> {
             }
             
             boolean added = block.addRecord(instance);
+
             if (!added) {
-                throw new RuntimeException("Block is full, cannot insert record");
+                throw new RuntimeException("Could not insert a record. Should not happen.");
             }
             
             writeBlock(blockNumber, block);
@@ -162,7 +126,6 @@ public class Heap<T extends StorableRecord> {
             blockManager.updateAfterInsert(blockNumber, block.getValidBlockCount(), blockingFactor, blockSize);
             
             return blockNumber;
-            
         } catch (IOException e) {
             throw new RuntimeException("Error inserting record to file", e);
         }
@@ -205,7 +168,6 @@ public class Heap<T extends StorableRecord> {
                 }
                 
                 if (block.isEmpty() && !sequentialMode && truncateAtTheEndIfPossible(blockNumber)) {
-                    // Block truncated, no need to write
                 } else {
                     writeBlock(blockNumber, block);
                 }
