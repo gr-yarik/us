@@ -89,7 +89,7 @@ public class Heap<T extends StorableRecord> {
 
     public int insert(T instance) {
         if (sequentialMode) {
-            throw new UnsupportedOperationException("Cannot use insert() in sequential mode. Use insertIntoBlock() instead.");
+            throw new UnsupportedOperationException("Cannot use insert() in sequential mode.");
         }
         
         try {
@@ -163,7 +163,7 @@ public class Heap<T extends StorableRecord> {
             if (deleted) {
                 int newValidCount = block.getValidBlockCount();
                 
-                if (!sequentialMode && blockManager != null) {
+                if (!sequentialMode) {
                     blockManager.updateAfterDelete(blockNumber, newValidCount, blockingFactor, blockSize);
                 }
                 

@@ -61,10 +61,8 @@ public class BlockManager {
     }
     
     public void updateAfterInsert(int blockIndex, int validCount, int blockingFactor, int blockSize) {
-        if ((emptyBlocks.remove(Integer.valueOf(blockIndex)) ||
-        partiallyEmptyBlocks.remove(Integer.valueOf(blockIndex))) == false) {
-            throw new RuntimeException("Block " + blockIndex + " was not found in empty or partially empty blocks");
-        }
+        emptyBlocks.remove(Integer.valueOf(blockIndex));
+        partiallyEmptyBlocks.remove(Integer.valueOf(blockIndex));
         
         if (validCount == 0) {
             emptyBlocks.add(blockIndex);
