@@ -32,7 +32,7 @@ public class LinearHash<T extends StorableRecord> {
         this.totalOverflowBlocks = 0;
         this.totalPrimaryBuckets = M;
         
-        bucketHeap.extendToBucketCount(M);
+        bucketHeap.getMainBucketsHeap().extendToBlockCount(M);
         updateMetadata();
     }
     
@@ -113,7 +113,7 @@ public class LinearHash<T extends StorableRecord> {
     }
     
     private void performSplit() throws IOException {
-        Bucket<T> bucketToSplit = bucketHeap.readBucket(splitPointer);
+        Bucket<T> bucketToSplit = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(splitPointer);
         if (bucketToSplit == null) {
             return;
         }
@@ -123,7 +123,7 @@ public class LinearHash<T extends StorableRecord> {
         
         Class<T> recordClass = (Class<T>) allRecords.get(0).getClass();
         bucketToSplit = new Bucket<>(
-            bucketHeap.getBlockingFactor(),
+            bucketHeap.getMainBucketsHeap().getBlockingFactor(),
             bucketHeap.getBlockSize(),
             recordClass
         );
@@ -176,7 +176,7 @@ public class LinearHash<T extends StorableRecord> {
             return;
         }
         
-        Bucket<T> lastBucket = bucketHeap.readBucket(a);
+        Bucket<T> lastBucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(a);
         if (lastBucket == null) {
             return;
         }
@@ -193,11 +193,11 @@ public class LinearHash<T extends StorableRecord> {
         @SuppressWarnings("unchecked")
         Class<T> recordClass = (Class<T>) recordsToMerge.get(0).getClass();
         Bucket<T> emptyBucket = new Bucket<>(
-            bucketHeap.getBlockingFactor(),
+            bucketHeap.getMainBucketsHeap().getBlockingFactor(),
             bucketHeap.getBlockSize(),
             recordClass
         );
-        bucketHeap.writeBucket(a, emptyBucket);
+        bucketHeap.getMainBucketsHeap().writeBlock(a, emptyBucket);
         
         if (splitPointer > 0) {
             splitPointer = b; // S := b
@@ -211,14 +211,14 @@ public class LinearHash<T extends StorableRecord> {
     }
     
     private boolean willShakingFreeOverflowBlocks(int bucketAddress) throws IOException {
-        Bucket<T> bucket = bucketHeap.readBucket(bucketAddress);
+        Bucket<T> bucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(bucketAddress);
         if (bucket == null || bucket.getOverflowBucketCount() == 0) {
             return false;
         }
         
         int currentOverflowBlocks = bucket.getOverflowBucketCount();
         int totalElements = bucket.getTotalElementCount();
-        int blockingFactor = bucketHeap.getBlockingFactor();
+        int blockingFactor = bucketHeap.getMainBucketsHeap().getBlockingFactor();
         
         int recordsNeedingOverflow = Math.max(0, totalElements - blockingFactor);
         
@@ -233,7 +233,7 @@ public class LinearHash<T extends StorableRecord> {
     }
     
     private void performShaking(int bucketAddress) throws IOException {
-        Bucket<T> bucket = bucketHeap.readBucket(bucketAddress);
+        Bucket<T> bucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(bucketAddress);
         if (bucket == null || bucket.getOverflowBucketCount() == 0) {
             return;
         }
@@ -248,7 +248,7 @@ public class LinearHash<T extends StorableRecord> {
         @SuppressWarnings("unchecked")
         Class<T> recordClass = (Class<T>) allRecords.get(0).getClass();
         bucket = new Bucket<>(
-            bucketHeap.getBlockingFactor(),
+            bucketHeap.getMainBucketsHeap().getBlockingFactor(),
             bucketHeap.getBlockSize(),
             recordClass
         );
@@ -265,7 +265,7 @@ public class LinearHash<T extends StorableRecord> {
         try {
             int calculatedOverflowBlocks = 0;
             for (int i = 0; i < totalPrimaryBuckets; i++) {
-                Bucket<T> bucket = bucketHeap.readBucket(i);
+                Bucket<T> bucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(i);
                 if (bucket != null) {
                     calculatedOverflowBlocks += bucket.getOverflowBucketCount();
                 }
