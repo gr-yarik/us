@@ -3,6 +3,8 @@ package UnsortedFile;
 import java.io.File;
 import java.util.*;
 
+import LinearHashing.Person;
+
 public class AutoTester {
     
     private static final String HEAP_FILE = "autotest";

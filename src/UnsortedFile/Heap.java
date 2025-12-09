@@ -13,7 +13,6 @@ public class Heap<T extends StorableRecord> {
     private BinaryFile binaryFile;
     private BlockManager blockManager;
     private boolean sequentialMode;
-    private int reservedBytes;
 
       public Heap(String pathToFile, int blockSize, Class<T> recordClass) {
         this(pathToFile, blockSize, recordClass, false, 4);
@@ -284,6 +283,11 @@ public class Heap<T extends StorableRecord> {
             return readBlock(blockNumber, Block.class);
         }
     }
+
+    public boolean checkIfBlockExists(int blockNumber) throws IOException {
+        long position = (long) blockNumber * blockSize;
+        return position < binaryFile.getSize();
+    }
     
     public <B extends Block<T>> B readBlock(int blockNumber, Class<B> blockClass) throws IOException {
         long position = (long) blockNumber * blockSize;
@@ -313,47 +317,36 @@ public class Heap<T extends StorableRecord> {
         binaryFile.write(blockData);
     }
     
-    public boolean insertIntoBlock(int blockNumber, T record) throws IOException {
-        Block<T> block = readBlock(blockNumber);
+    // public boolean insertIntoBlock(int blockNumber, T record) throws IOException {
+    //     Block<T> block = readBlock(blockNumber);
         
-        if (block == null) {
-            if (sequentialMode) {
-                block = new Bucket<>(blockingFactor, blockSize, recordClass);
-            } else {
-                block = new Block<>(blockingFactor, blockSize, recordClass);
-            }
-        }
+    //     if (block == null) {
+    //         if (sequentialMode) {
+    //             block = new Bucket<>(blockingFactor, blockSize, recordClass);
+    //         } else {
+    //             block = new Block<>(blockingFactor, blockSize, recordClass);
+    //         }
+    //     }
         
-        if (block.isFull()) {
-            return false;
-        }
+    //     if (block.isFull()) {
+    //         return false;
+    //     }
         
-        boolean added = block.addRecord(record);
-        if (!added) {
-            return false;
-        }
+    //     boolean added = block.addRecord(record);
+    //     if (!added) {
+    //         return false;
+    //     }
         
-        writeBlock(blockNumber, block);
+    //     writeBlock(blockNumber, block);
         
-        if (!sequentialMode && blockManager != null) {
-            blockManager.updateAfterInsert(blockNumber, block.getValidBlockCount(), 
-                                         blockingFactor, blockSize);
-        }
+    //     if (!sequentialMode && blockManager != null) {
+    //         blockManager.updateAfterInsert(blockNumber, block.getValidBlockCount(), 
+    //                                      blockingFactor, blockSize);
+    //     }
         
-        return true;
-    }
+    //     return true;
+    // }
     
-    public void ensureBlockExists(int blockNumber) throws IOException {
-        Block<T> block = readBlock(blockNumber);
-        if (block == null) {
-            if (sequentialMode) {
-                block = new Bucket<>(blockingFactor, blockSize, recordClass);
-            } else {
-                block = new Block<>(blockingFactor, blockSize, recordClass);
-            }
-            writeBlock(blockNumber, block);
-        }
-    }
     
     public void extendToBlockCount(int blockCount) throws IOException {
         if (!sequentialMode) {

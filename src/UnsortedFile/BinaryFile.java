@@ -11,10 +11,6 @@ public class BinaryFile {
     public BinaryFile(String pathToFile) throws IOException {
         File f = new File(pathToFile);
         
-        if (f.getParentFile() != null && !f.getParentFile().exists()) {
-            f.getParentFile().mkdirs();
-        }
-        
         this.file = new RandomAccessFile(f, "rw");
     }
     

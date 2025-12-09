@@ -32,9 +32,18 @@ public class BucketHeap<T extends StorableRecord> {
     }
     
     public boolean insertIntoBucket(int bucketNumber, T record) throws IOException {
-        ensureBucketExists(bucketNumber);
         
-        Bucket<T> bucket = readBucket(bucketNumber);
+        Bucket<T> bucket;
+        if(mainBucketsHeap.checkIfBlockExists(bucketNumber)) {
+            bucket = readBucket(bucketNumber);
+        } else {
+            bucket = new Bucket<>(
+                mainBucketsHeap.getBlockingFactor(),
+                mainBucketsBlockSize,
+                recordClass
+            );
+        }
+        
         if (!bucket.isFull()) {
             boolean inserted = bucket.addRecord(record);
             if (inserted) {
@@ -44,11 +53,11 @@ public class BucketHeap<T extends StorableRecord> {
             }
         }
         
-        return insertIntoOverflow(bucketNumber, record);
+        return insertIntoOverflow(bucket, bucketNumber, record);
     }
     
-    private boolean insertIntoOverflow(int bucketNumber, T record) throws IOException {
-        Bucket<T> bucket = readBucket(bucketNumber);
+    private boolean insertIntoOverflow(Bucket<T> bucket, int bucketNumber, T record) throws IOException {
+
         int firstOverflowBlock = bucket.getFirstOverflowBlock();
         
         if (firstOverflowBlock == -1) {
@@ -58,52 +67,43 @@ public class BucketHeap<T extends StorableRecord> {
             bucket.setFirstOverflowBlock(overflowBlockNum);
             bucket.setOverflowBucketCount(bucket.getOverflowBucketCount() + 1);
         } else {
-
-            int overflowBucketCount = bucket.getOverflowBucketCount();
             OverflowBlock<T> current = readOverflowBlock(firstOverflowBlock);
             int currentBlockNum = firstOverflowBlock;
-            OverflowBlock<T> targetBlock = null;
-            int targetBlockNum = -1;
             int blocksTraversed = 1; 
 
-            while (blocksTraversed <= overflowBucketCount) {
+            while (current.getNextOverflowBlock() != -1) {
                 if (!current.isFull()) {
-                    targetBlock = current;
-                    targetBlockNum = currentBlockNum;
-                    break;
+                    current.addRecord(record);
+                    writeOverflowBlock(currentBlockNum, current);
+                    bucket.setTotalElementCount(bucket.getTotalElementCount() + 1);
+
+                    writeBucket(bucketNumber, bucket);
+                    return true;
                 }
                 if (current.getNextOverflowBlock() == -1) {
                 
-                    targetBlock = current;
-                    targetBlockNum = currentBlockNum;
-                    break;
+                    if(blocksTraversed != bucket.getOverflowBucketCount()) {
+                        throw new IOException("Traversed and expected number of overflow blocks does not match!");
+                    }
+
+                    OverflowBlock<T> newOverflow = createEmptyOverflowBlock();
+                    newOverflow.addRecord(record);
+                    int newOverflowBlockNum = allocateOverflowBlock(newOverflow);
+                    current.setNextOverflowBlock(newOverflowBlockNum);
+                    writeOverflowBlock(currentBlockNum, current);
+
+                    bucket.setOverflowBucketCount(bucket.getOverflowBucketCount() + 1);
+                    bucket.setTotalElementCount(bucket.getTotalElementCount() + 1);
+                    writeBucket(bucketNumber, bucket);
+                    return true;
                 }
                
                 currentBlockNum = current.getNextOverflowBlock();
                 current = readOverflowBlock(currentBlockNum);
                 blocksTraversed++;
             }
-
-            if (targetBlock != null && !targetBlock.isFull()) {
-                targetBlock.addRecord(record);
-                writeOverflowBlock(targetBlockNum, targetBlock);
-            } else if (targetBlock != null) {
-                OverflowBlock<T> newOverflow = createEmptyOverflowBlock();
-                newOverflow.addRecord(record);
-                int newOverflowBlockNum = allocateOverflowBlock(newOverflow);
-                targetBlock.setNextOverflowBlock(newOverflowBlockNum);
-                writeOverflowBlock(targetBlockNum, targetBlock);
-                bucket.setOverflowBucketCount(bucket.getOverflowBucketCount() + 1);
-            }
         }
-        
-        bucket.setTotalElementCount(bucket.getTotalElementCount() + 1);
-        writeBucket(bucketNumber, bucket);
-        return true;
-    }
-    
-    public void ensureBucketExists(int bucketNumber) throws IOException {
-        mainBucketsHeap.ensureBlockExists(bucketNumber);
+        return false;
     }
     
     public void extendToBucketCount(int bucketCount) throws IOException {
@@ -209,6 +209,8 @@ public class BucketHeap<T extends StorableRecord> {
             if (current.delete(partialRecord)) {
                 writeOverflowBlock(currentBlockNum, current);
                 
+                fix all below
+                ///
                 if (current.isEmpty() && prev != null) {
                     prev.setNextOverflowBlock(current.getNextOverflowBlock());
                     int prevBlockNum = firstOverflowBlock;
@@ -228,7 +230,8 @@ public class BucketHeap<T extends StorableRecord> {
                     bucket.setOverflowBucketCount(bucket.getOverflowBucketCount() - 1);
                     writeBucket(bucketNumber, bucket);
                 }
-                
+                ///
+
                 return true;
             }
             

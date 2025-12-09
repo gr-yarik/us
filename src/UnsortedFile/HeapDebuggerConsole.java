@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
+import LinearHashing.Person;
+
 public class HeapDebuggerConsole {
     
     private String heapFilePath;

@@ -22,11 +22,6 @@ public class LinearHash<T extends StorableRecord> {
     private int totalOverflowBlocks;
     private int totalPrimaryBuckets;
     
-    public LinearHash(String mainBucketsPath, String overflowBlocksPath, int blockSize,
-                     Class<T> recordClass, Function<T, Integer> keyExtractor) throws IOException {
-        this(mainBucketsPath, overflowBlocksPath, blockSize, blockSize, recordClass, keyExtractor);
-    }
-
     public LinearHash(String mainBucketsPath, String overflowBlocksPath, int mainBucketsBlockSize,
                      int overflowBlockSize, Class<T> recordClass, Function<T, Integer> keyExtractor) throws IOException {
         this.keyExtractor = keyExtractor;
@@ -126,7 +121,6 @@ public class LinearHash<T extends StorableRecord> {
         List<T> allRecords = new ArrayList<>();
         bucketHeap.collectAllRecords(splitPointer, allRecords);
         
-        @SuppressWarnings("unchecked")
         Class<T> recordClass = (Class<T>) allRecords.get(0).getClass();
         bucketToSplit = new Bucket<>(
             bucketHeap.getBlockingFactor(),
@@ -135,7 +129,7 @@ public class LinearHash<T extends StorableRecord> {
         );
         
         int newBucketAddress = splitPointer + (M * (1 << level));
-        bucketHeap.ensureBucketExists(newBucketAddress);
+       // bucketHeap.ensureBucketExists(newBucketAddress);
 
         bucketHeap.clearOverflowChain(splitPointer);
         
@@ -197,7 +191,7 @@ public class LinearHash<T extends StorableRecord> {
         }
         
         @SuppressWarnings("unchecked")
-        Class<T> recordClass = (Class<T>) lastBucket.getAllRecordSlots()[0].getClass();
+        Class<T> recordClass = (Class<T>) recordsToMerge.get(0).getClass();
         Bucket<T> emptyBucket = new Bucket<>(
             bucketHeap.getBlockingFactor(),
             bucketHeap.getBlockSize(),
