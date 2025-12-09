@@ -32,7 +32,6 @@ public class BucketHeap<T extends StorableRecord> {
     }
     
     public boolean insertIntoBucket(int bucketNumber, T record) throws IOException {
-        
         Bucket<T> bucket;
         if(mainBucketsHeap.checkIfBlockExists(bucketNumber)) {
             bucket = readBucket(bucketNumber);
@@ -65,13 +64,16 @@ public class BucketHeap<T extends StorableRecord> {
             newOverflow.addRecord(record);
             int overflowBlockNum = allocateOverflowBlock(newOverflow);
             bucket.setFirstOverflowBlock(overflowBlockNum);
-            bucket.setOverflowBucketCount(bucket.getOverflowBucketCount() + 1);
+            bucket.setOverflowBucketCount(1);
+            bucket.setTotalElementCount(bucket.getTotalElementCount() + 1);
+            writeBucket(bucketNumber, bucket);
+            return true;
         } else {
             OverflowBlock<T> current = readOverflowBlock(firstOverflowBlock);
             int currentBlockNum = firstOverflowBlock;
             int blocksTraversed = 1; 
 
-            while (current.getNextOverflowBlock() != -1) {
+            while (true) {
                 if (!current.isFull()) {
                     current.addRecord(record);
                     writeOverflowBlock(currentBlockNum, current);
@@ -81,9 +83,8 @@ public class BucketHeap<T extends StorableRecord> {
                     return true;
                 }
                 if (current.getNextOverflowBlock() == -1) {
-                
                     if(blocksTraversed != bucket.getOverflowBucketCount()) {
-                        throw new IOException("Traversed and expected number of overflow blocks does not match!");
+                        throw new IOException("Traversed and expected number of overflow buckets does not match.");
                     }
 
                     OverflowBlock<T> newOverflow = createEmptyOverflowBlock();
@@ -103,7 +104,6 @@ public class BucketHeap<T extends StorableRecord> {
                 blocksTraversed++;
             }
         }
-        return false;
     }
     
     public void extendToBucketCount(int bucketCount) throws IOException {
@@ -208,30 +208,6 @@ public class BucketHeap<T extends StorableRecord> {
         while (current != null) {
             if (current.delete(partialRecord)) {
                 writeOverflowBlock(currentBlockNum, current);
-                
-                fix all below
-                ///
-                if (current.isEmpty() && prev != null) {
-                    prev.setNextOverflowBlock(current.getNextOverflowBlock());
-                    int prevBlockNum = firstOverflowBlock;
-                    OverflowBlock<T> temp = readOverflowBlock(firstOverflowBlock);
-                    while (temp.getNextOverflowBlock() != currentBlockNum) {
-                        prevBlockNum = temp.getNextOverflowBlock();
-                        temp = readOverflowBlock(prevBlockNum);
-                    }
-                    writeOverflowBlock(prevBlockNum, prev);
-                    
-                    Bucket<T> bucket = readBucket(bucketNumber);
-                    bucket.setOverflowBucketCount(bucket.getOverflowBucketCount() - 1);
-                    writeBucket(bucketNumber, bucket);
-                } else if (current.isEmpty() && prev == null) {
-                    Bucket<T> bucket = readBucket(bucketNumber);
-                    bucket.setFirstOverflowBlock(current.getNextOverflowBlock());
-                    bucket.setOverflowBucketCount(bucket.getOverflowBucketCount() - 1);
-                    writeBucket(bucketNumber, bucket);
-                }
-                ///
-
                 return true;
             }
             

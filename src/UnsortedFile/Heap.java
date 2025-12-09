@@ -26,8 +26,7 @@ public class Heap<T extends StorableRecord> {
         this.blockSize = blockSize; 
         this.recordClass = recordClass;
         this.sequentialMode = sequentialMode;
-        this.reservedBytes = reservedBytes;
-        
+
         try {
             T templateRecord = recordClass.getDeclaredConstructor().newInstance();
             this.recordSize = templateRecord.sizeInBytes();
@@ -316,37 +315,6 @@ public class Heap<T extends StorableRecord> {
         byte[] blockData = block.ToByteArray();
         binaryFile.write(blockData);
     }
-    
-    // public boolean insertIntoBlock(int blockNumber, T record) throws IOException {
-    //     Block<T> block = readBlock(blockNumber);
-        
-    //     if (block == null) {
-    //         if (sequentialMode) {
-    //             block = new Bucket<>(blockingFactor, blockSize, recordClass);
-    //         } else {
-    //             block = new Block<>(blockingFactor, blockSize, recordClass);
-    //         }
-    //     }
-        
-    //     if (block.isFull()) {
-    //         return false;
-    //     }
-        
-    //     boolean added = block.addRecord(record);
-    //     if (!added) {
-    //         return false;
-    //     }
-        
-    //     writeBlock(blockNumber, block);
-        
-    //     if (!sequentialMode && blockManager != null) {
-    //         blockManager.updateAfterInsert(blockNumber, block.getValidBlockCount(), 
-    //                                      blockingFactor, blockSize);
-    //     }
-        
-    //     return true;
-    // }
-    
     
     public void extendToBlockCount(int blockCount) throws IOException {
         if (!sequentialMode) {
