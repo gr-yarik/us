@@ -1,6 +1,7 @@
 package UnsortedFile;
 
 import java.io.IOException;
+import java.util.function.Consumer;
 
 import LinearHashing.Bucket;
 
@@ -149,7 +150,7 @@ public class Heap<T extends StorableRecord> {
         }
     }
 
-    public boolean delete(int blockNumber, T partialRecord) {
+    public boolean delete(int blockNumber, T partialRecord, Consumer<Block<T>> onSuccessDelete, Consumer<Block<T>> onUnsuccessDelete) {
         try {
             Block<T> block = readBlock(blockNumber);
         
@@ -167,6 +168,10 @@ public class Heap<T extends StorableRecord> {
                     blockManager.updateAfterDelete(blockNumber, newValidCount, blockingFactor, blockSize);
                 }
                 
+                if (onSuccessDelete != null) {
+                    onSuccessDelete.accept(block);
+                }
+                
                 if (block.isEmpty() && !sequentialMode) {
                     truncateAtTheEndIfPossible();
                 } else {
@@ -176,6 +181,7 @@ public class Heap<T extends StorableRecord> {
                 return true;
             }
             
+            onUnsuccessDelete.accept(block);;
             return false;
         } catch (IOException e) {
             throw new RuntimeException("Error deleting record from file", e);
@@ -221,7 +227,7 @@ public class Heap<T extends StorableRecord> {
             blockManager.removeBlock(i, blockSize);
         }
     }
-    
+
     public Block<T> readBlock(int blockNumber) throws IOException {
         if(sequentialMode) {
             return readBlock(blockNumber, Bucket.class);

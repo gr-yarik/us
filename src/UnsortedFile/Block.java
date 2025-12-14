@@ -31,10 +31,11 @@ public class Block<T extends StorableRecord> {
     }
     
     public T[] getAllRecordSlots() {
-        T[] allSlots = (T[]) java.lang.reflect.Array.newInstance(
-            records.getClass().getComponentType(), blockingFactor);
-        System.arraycopy(records, 0, allSlots, 0, blockingFactor);
-        return allSlots;
+        // T[] allSlots = (T[]) java.lang.reflect.Array.newInstance(
+        //     records.getClass().getComponentType(), blockingFactor);
+        // System.arraycopy(records, 0, allSlots, 0, blockingFactor);
+        // return allSlots;
+        return records;
     }
     
     public int getValidBlockCount() {
@@ -73,6 +74,15 @@ public class Block<T extends StorableRecord> {
         records[validBlockCount] = null;
         
         return true;
+    }
+
+    public int deleteAllRecords() {
+        int temp = validBlockCount;
+        for (int i = 0; i < temp; i++) {
+            records[i] = null;
+        }
+        validBlockCount = 0;
+        return temp;
     }
     
     public boolean isFull() {

@@ -259,7 +259,7 @@ public class UnsortedFileTester {
             Person searchKey = new Person();
             searchKey.id = id;
             
-            boolean deleted = heap.delete(blockNumber, searchKey);
+            boolean deleted = heap.delete(blockNumber, searchKey, null);
             if (deleted) {
                 System.out.println("✓ Deleted user with ID: " + id + " from block " + blockNumber);
             } else {

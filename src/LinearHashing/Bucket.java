@@ -37,13 +37,33 @@ public class Bucket<T extends StorableRecord> extends Block<T> {
     public void setOverflowBucketCount(int count) {
         this.overflowBucketCount = count;
     }
+
+    public void decrementOverflowBucketCountByOne() {
+        this.overflowBucketCount--;
+    }
+
+    public void incrementOverflowBucketCountByOne() {
+        this.overflowBucketCount++;
+    }
     
     public int getTotalElementCount() {
         return totalElementCount;
     }
     
-    public void setTotalElementCount(int count) {
-        this.totalElementCount = count;
+    public void incrementTotalElementCountByOne() {
+        this.totalElementCount++;
+    }
+
+    public void incrementTotalElementCountBy(int howMuch) {
+        this.totalElementCount += howMuch;
+    }
+    
+    public void decrementTotalElementCountByOne() {
+        this.totalElementCount--;
+    }
+
+    public void decrementTotalElementCountBy(int howMuch) {
+        this.totalElementCount -= howMuch;
     }
     
     @Override
