@@ -66,7 +66,7 @@ public class AutoTester {
     private static void test1_InstantiateHeap() {
         System.out.println("Test 1: Instantiating Heap with file 'autotest', Person class, blockSize 512");
         try {
-            Heap<Person> heap = new Heap<>(HEAP_FILE, BLOCK_SIZE, Person.class);
+            Heap<Person> heap = new Heap<>(HEAP_FILE, BLOCK_SIZE, Person.class, false, 0);
             heap.close();
             pass("Test 1 passed: Heap instantiated successfully");
         } catch (Exception e) {
@@ -115,7 +115,7 @@ public class AutoTester {
         Map<Integer, List<Person>> blockMap = new HashMap<>();
         
         try {
-            Heap<Person> heap = new Heap<>(HEAP_FILE, BLOCK_SIZE, Person.class);
+            Heap<Person> heap = new Heap<>(HEAP_FILE, BLOCK_SIZE, Person.class, false, 0);
             
             for (int i = 0; i < INSERT_COUNT; i++) {
                 Person person = persons[i];
@@ -138,7 +138,7 @@ public class AutoTester {
     private static Heap<Person> test4_ReinstantiateHeap() {
         System.out.println("Test 4: Reinstantiating Heap from existing files");
         try {
-            Heap<Person> heap = new Heap<>(HEAP_FILE, METADATA_FILE, Person.class);
+            Heap<Person> heap = new Heap<>(HEAP_FILE, BLOCK_SIZE, Person.class, false, 0);
             pass("Test 4 passed: Heap reinstantiated successfully");
             System.out.println();
             return heap;
@@ -195,7 +195,7 @@ public class AutoTester {
                 if (blockMap.containsKey(blockNum)) {
                     List<Person> personsToDelete = new ArrayList<>(blockMap.get(blockNum));
                     for (Person person : personsToDelete) {
-                        if (heap.delete(blockNum, person, null)) {
+                        if (heap.delete(blockNum, person, null, null)) {
                             blockMap.get(blockNum).remove(person);
                             deleted++;
                         } else {
@@ -213,7 +213,7 @@ public class AutoTester {
                 List<Person> personsToDelete = blockMap.get(2).subList(0, 3);
                 List<Person> copy = new ArrayList<>(personsToDelete);
                 for (Person person : copy) {
-                    if (heap.delete(2, person, null)) {
+                    if (heap.delete(2, person, null, null)) {
                         blockMap.get(2).remove(person);
                         deleted++;
                     } else {
@@ -312,7 +312,7 @@ public class AutoTester {
                             for (Map.Entry<Integer, List<Person>> entry : operationBlockMap.entrySet()) {
                                 if (entry.getValue().remove(personToDelete)) {
                                     int blockNumber = entry.getKey();
-                                    if (heap.delete(blockNumber, personToDelete, null)) {
+                                    if (heap.delete(blockNumber, personToDelete, null, null)) {
                                         deleteSuccess++;
                                         if (entry.getValue().isEmpty()) {
                                             operationBlockMap.remove(blockNumber);
@@ -332,7 +332,7 @@ public class AutoTester {
                             List<Person> personsInBlock = operationBlockMap.get(blockNumber);
                             if (!personsInBlock.isEmpty()) {
                                 Person personToDelete = personsInBlock.remove(random.nextInt(personsInBlock.size()));
-                                if (heap.delete(blockNumber, personToDelete, null)) {
+                                if (heap.delete(blockNumber, personToDelete, null, null)) {
                                     deleteSuccess++;
                                     if (personsInBlock.isEmpty()) {
                                         operationBlockMap.remove(blockNumber);
