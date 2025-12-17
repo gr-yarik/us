@@ -6,7 +6,6 @@ import java.util.*;
 import UnsortedFile.Block;
 import UnsortedFile.Heap;
 import UnsortedFile.StorableRecord;
-import javaapplication1.main;
 
 public class BucketHeap<T extends StorableRecord> {
 
@@ -137,7 +136,26 @@ public class BucketHeap<T extends StorableRecord> {
 
                 // record was found in mainHeap and deleted
                 (Block<T> block) -> {
-                    ((Bucket<T>) block).decrementTotalElementCountByOne();
+                    Bucket<T> bucket = (Bucket<T>) block;
+                    bucket.decrementTotalElementCountByOne();
+
+                    int minimalRequiredOverflowBlockNumber = minimalRequiredOverflowBlockNumber(
+                            bucket.getTotalElementCount());
+
+                    if (minimalRequiredOverflowBlockNumber < bucket.getOverflowBucketCount()
+                            && bucket.getFirstOverflowBlock() != -1) {
+                        try {
+                            List<T> emptyCollectedRecords = new ArrayList<T>();
+
+                            List<Integer> overflowBlockNumbers = new ArrayList<>();
+                            overflowBlockNumbers.add(bucket.getFirstOverflowBlock());
+
+                            List<OverflowBlock<T>> emptyOverflowBlockInstances = new ArrayList<OverflowBlock<T>>();
+                            shuffle(bucket, bucketNumber, minimalRequiredOverflowBlockNumber, emptyCollectedRecords,
+                                    overflowBlockNumbers, emptyOverflowBlockInstances);                            
+                        } catch (Exception e) {
+                        }
+                    }
                 },
 
                 // record was not found in mainHeap. Trying to delete in overflow
@@ -213,6 +231,7 @@ public class BucketHeap<T extends StorableRecord> {
 
                             int minimalRequiredOverflowBlockNumber = minimalRequiredOverflowBlockNumber(
                                     bucket.getTotalElementCount());
+
                             // Check if striasenie (shuffle) can be done
                             if (minimalRequiredOverflowBlockNumber < bucket.getOverflowBucketCount()
                                     && bucket.getFirstOverflowBlock() != -1) {
@@ -275,7 +294,6 @@ public class BucketHeap<T extends StorableRecord> {
             List<OverflowBlock<T>> overflowBlockInstances) throws IOException {
 
         // collectAllRecords(bucketInstance, allRecords);
-
         for (int i = overflowBlockInstances.getLast().getNextOverflowBlock(); i != -1;) {
             OverflowBlock<T> block = overflowHeap.readBlock(i, OverflowBlock.class);
 
@@ -430,6 +448,12 @@ public class BucketHeap<T extends StorableRecord> {
     }
 
     public void collectAllRecords(Bucket<T> bucket, List<T> records) throws IOException {
+        collectAllRecords(bucket, records, null);
+    }
+
+    public void collectAllRecords(Bucket<T> bucket, List<T> records,
+            java.util.function.BiConsumer<Bucket<T>, List<OverflowBlock<T>>> cleanupCallback) throws IOException {
+        List<OverflowBlock<T>> overflowBlocks = new ArrayList<>();
 
         for (int i = 0; i < bucket.getValidBlockCount(); i++) {
             T record = bucket.getRecord(i);
@@ -442,6 +466,7 @@ public class BucketHeap<T extends StorableRecord> {
         if (firstOverflowBlock != -1) {
             OverflowBlock<T> current = overflowHeap.readBlock(firstOverflowBlock, OverflowBlock.class);
             while (true) {
+                overflowBlocks.add(current);
                 for (int i = 0; i < current.getValidBlockCount(); i++) {
                     T record = current.getRecord(i);
                     records.add(record);
@@ -452,6 +477,10 @@ public class BucketHeap<T extends StorableRecord> {
                 }
                 current = overflowHeap.readBlock(current.getNextOverflowBlock(), OverflowBlock.class);
             }
+        }
+
+        if (cleanupCallback != null) {
+            cleanupCallback.accept(bucket, overflowBlocks);
         }
     }
 

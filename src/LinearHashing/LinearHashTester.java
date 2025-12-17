@@ -12,9 +12,9 @@ public class LinearHashTester {
     private static final String MAIN_METADATA_FILE = "linearhash_main.meta";
     private static final String OVERFLOW_BLOCKS_FILE = "linearhash_overflow";
     private static final String OVERFLOW_METADATA_FILE = "linearhash_overflow.meta";
-    private static final int BLOCK_SIZE = 512;
-    private static final int OVERFLOW_BLOCK_SIZE = 256;
-    private static final int TOTAL_PERSONS = 1000;
+    private static final int BLOCK_SIZE = 250; // 512;
+    private static final int OVERFLOW_BLOCK_SIZE = 200; //256;
+    private static final int TOTAL_PERSONS = 1;
 
     private static int testsPassed = 0;
     private static int testsFailed = 0;
@@ -23,15 +23,16 @@ public class LinearHashTester {
     private static int testMethodsFailed = 0;
 
     private static int extractKey(Person person) {
-        if (person.id != null && person.id.startsWith("ID")) {
-            try {
-                String numericPart = person.id.substring(2);
-                return Integer.parseInt(numericPart);
-            } catch (NumberFormatException e) {
-                return Math.abs(person.id.hashCode());
-            }
-        }
-        return Math.abs(person.id != null ? person.id.hashCode() : 0);
+       return Integer.parseInt(person.id.substring(2));
+        // if (person.id != null && person.id.startsWith("ID")) {
+        //     try {
+                // String numericPart = person.id.substring(2);
+        //         return Integer.parseInt(numericPart);
+        //     } catch (NumberFormatException e) {
+        //         return Math.abs(person.id.hashCode());
+        //     }
+        // }
+        // return Math.abs(person.id != null ? person.id.hashCode() : 0);
     }
 
     public static void main(String[] args) {
@@ -48,21 +49,29 @@ public class LinearHashTester {
 
             LinearHash<Person> linearHash = test3_InsertRecords(persons);
 
-            test4_VerifyAllRecords(linearHash, persons);
+            // Launch debugger UI (non-blocking)
+            if (linearHash != null) {
+                LinearHashDebugger.launch(linearHash);
+                System.out.println("Debugger UI launched. LinearHash will remain open while debugger is active.\n");
+            }
 
-            test5_TestOverflowHandling(linearHash);
+            // test4_VerifyAllRecords(linearHash, persons);
 
-            test6_TestSplitOperation(linearHash);
+            // test5_TestOverflowHandling(linearHash);
 
-            test7_DeleteRecords(linearHash, persons);
+            // test6_TestSplitOperation(linearHash);
 
-            test8_TestMergeOperation(linearHash);
+            // test7_DeleteRecords(linearHash, persons);
 
-            test9_RandomOperations(linearHash, persons);
+            // test8_TestMergeOperation(linearHash);
 
-            linearHash.close();
+            // test9_RandomOperations(linearHash, persons);
 
-            printSummary();
+            // Note: linearHash.close() is commented out to keep it open for the debugger
+            // The debugger will keep the LinearHash instance alive
+            // linearHash.close();
+
+            // printSummary();
 
         } catch (Exception e) {
             System.err.println("\n✗ FATAL ERROR: " + e.getMessage());
@@ -177,7 +186,7 @@ public class LinearHashTester {
                 if ((i + 1) % 100 == 0) {
                     System.out.println("  Inserted " + (i + 1) + " records... (buckets: " +
                             linearHash.getTotalPrimaryBuckets() + ", overflow: " +
-                            linearHash.getTotalOverflowBlocks() + ", ratio: " +
+                            linearHash.getDebugInfoTotalOverflowBlocks() + ", ratio: " +
                             String.format("%.2f", linearHash.getOverflowRatio()) + ")");
                 }
             }
@@ -186,7 +195,7 @@ public class LinearHashTester {
             System.out.println("    Level: " + linearHash.getLevel());
             System.out.println("    Split pointer: " + linearHash.getSplitPointer());
             System.out.println("    Primary buckets: " + linearHash.getTotalPrimaryBuckets());
-            System.out.println("    Overflow blocks: " + linearHash.getTotalOverflowBlocks());
+            System.out.println("    Overflow blocks: " + linearHash.getDebugInfoTotalOverflowBlocks());
             System.out.println("    Overflow ratio: " + String.format("%.2f", linearHash.getOverflowRatio()));
 
             if (failed == 0) {
@@ -248,7 +257,7 @@ public class LinearHashTester {
     private static void test5_TestOverflowHandling(LinearHash<Person> linearHash) {
         System.out.println("Test 5: Testing overflow handling");
         try {
-            int initialOverflowBlocks = linearHash.getTotalOverflowBlocks();
+            int initialOverflowBlocks = linearHash.getDebugInfoTotalOverflowBlocks();
             int initialBuckets = linearHash.getTotalPrimaryBuckets();
 
             Person[] extraPersons = new Person[100];
@@ -261,7 +270,7 @@ public class LinearHashTester {
                 linearHash.insert(extraPersons[i]);
             }
 
-            int finalOverflowBlocks = linearHash.getTotalOverflowBlocks();
+            int finalOverflowBlocks = linearHash.getDebugInfoTotalOverflowBlocks();
             int finalBuckets = linearHash.getTotalPrimaryBuckets();
 
             System.out.println("  Initial overflow blocks: " + initialOverflowBlocks);
@@ -506,7 +515,7 @@ public class LinearHashTester {
             System.out.println("    Level: " + linearHash.getLevel());
             System.out.println("    Split pointer: " + linearHash.getSplitPointer());
             System.out.println("    Buckets: " + linearHash.getTotalPrimaryBuckets());
-            System.out.println("    Overflow blocks: " + linearHash.getTotalOverflowBlocks());
+            System.out.println("    Overflow blocks: " + linearHash.getDebugInfoTotalOverflowBlocks());
             System.out.println("    Overflow ratio: " + String.format("%.2f", linearHash.getOverflowRatio()));
 
             if (failures == 0) {

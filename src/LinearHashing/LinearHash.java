@@ -10,16 +10,17 @@ import UnsortedFile.StorableRecord;
 public class LinearHash<T extends StorableRecord> {
 
     private static final int M = 2;
-    private static final double SPLIT_THRESHOLD = 0.8;
-    private static final double MERGE_THRESHOLD = 0.1;
+    private static final double SPLIT_THRESHOLD = 0.9;
+    private static final double MERGE_THRESHOLD = 0.15;
 
     private BucketHeap<T> bucketHeap;
     private Function<T, Integer> keyExtractor;
 
     private int level;
     private int splitPointer;
-    private int totalOverflowBlocks;
     private int totalPrimaryBuckets;
+
+    private int debugInfoTotalOverflowBlocks;
 
     public LinearHash(String mainBucketsPath, String overflowBlocksPath, int mainBucketsBlockSize,
             int overflowBlockSize, Class<T> recordClass, Function<T, Integer> keyExtractor) throws IOException {
@@ -29,11 +30,11 @@ public class LinearHash<T extends StorableRecord> {
 
         this.level = 0;
         this.splitPointer = 0;
-        this.totalOverflowBlocks = 0;
+        this.debugInfoTotalOverflowBlocks = 0;
         this.totalPrimaryBuckets = M;
 
         bucketHeap.getMainBucketsHeap().extendToBlockCount(M);
-        updateMetadata();
+        updateDebugInfo();
     }
 
     private int hashU(int key) {
@@ -61,8 +62,12 @@ public class LinearHash<T extends StorableRecord> {
 
         boolean inserted = bucketHeap.insertIntoBucket(bucketAddress, record);
         if (inserted) {
-            updateMetadata();
-            checkAndSplit();
+            updateDebugInfo();
+
+            double overflowRatio = calculateOverflowRatio();
+            if (overflowRatio > SPLIT_THRESHOLD) {
+                performSplit();
+            }
         }
         return inserted;
     }
@@ -80,49 +85,43 @@ public class LinearHash<T extends StorableRecord> {
 
         boolean deleted = bucketHeap.delete(bucketAddress, partialRecord);
         if (deleted) {
-            updateMetadata();
-
-            // Ak hustota d klesla pod hranicu
-            if (willShakingFreeOverflowBlocks(bucketAddress)) {
-                performShaking(bucketAddress);
-            }
+            updateDebugInfo();
             checkAndMerge();
         }
         return deleted;
     }
 
-    private void checkAndSplit() throws IOException {
-        double overflowRatio = calculateOverflowRatio();
-        if (overflowRatio > SPLIT_THRESHOLD) {
-            performSplit();
-        }
-    }
-
     private void checkAndMerge() throws IOException {
         double overflowRatio = calculateOverflowRatio();
+        // Ak hustota d klesla pod hranicu
         if (overflowRatio < MERGE_THRESHOLD && totalPrimaryBuckets > M) {
             performMerge();
         }
     }
 
     private double calculateOverflowRatio() {
-        if (totalPrimaryBuckets == 0) {
-            return 0.0;
-        }
-        return (double) totalOverflowBlocks / totalPrimaryBuckets;
+        int mainBlocks = bucketHeap.getMainBucketsHeap().totalBlockCount();
+        int overflowBlocks = bucketHeap.getOverflowHeap().totalBlockCount();
+        return (double) overflowBlocks / mainBlocks;
     }
 
     private void performSplit() throws IOException {
         Bucket<T> bucketToSplit = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(splitPointer);
-        if (bucketToSplit == null) {
-            return;
-        }
-
         List<T> allRecords = new ArrayList<>();
-        bucketHeap.collectAllRecords(splitPointer, allRecords);
+        
+        bucketHeap.collectAllRecords(bucketToSplit, allRecords, (bucket, overflowBlocks) -> {
+
+            bucket.deleteAllRecords();
+
+            for (OverflowBlock<T> overflowBlock : overflowBlocks) {
+                overflowBlock.deleteAllRecords();
+                overflowBlock.setNextOverflowBlock(-1);
+            }
+        });
 
         Class<T> recordClass = (Class<T>) allRecords.get(0).getClass();
-        bucketToSplit = new Bucket<>(
+
+        Bucket<T> newBucket = new Bucket<>(
                 bucketHeap.getMainBucketsHeap().getBlockingFactor(),
                 bucketHeap.getBlockSize(),
                 recordClass);
@@ -132,7 +131,7 @@ public class LinearHash<T extends StorableRecord> {
 
         bucketHeap.clearOverflowChain(splitPointer);
 
-        for (T record : allRecords) {
+        for (T record: allRecords) {
             int recordKey = keyExtractor.apply(record);
             int newAddress = hashNext(recordKey);
 
@@ -150,7 +149,7 @@ public class LinearHash<T extends StorableRecord> {
         }
 
         totalPrimaryBuckets++;
-        updateMetadata();
+        updateDebugInfo();
     }
 
     private void performMerge() throws IOException {
@@ -205,60 +204,10 @@ public class LinearHash<T extends StorableRecord> {
         }
 
         totalPrimaryBuckets--;
-        updateMetadata();
+        updateDebugInfo();
     }
 
-    private boolean willShakingFreeOverflowBlocks(int bucketAddress) throws IOException {
-        Bucket<T> bucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(bucketAddress);
-        if (bucket == null || bucket.getOverflowBucketCount() == 0) {
-            return false;
-        }
-
-        int currentOverflowBlocks = bucket.getOverflowBucketCount();
-        int totalElements = bucket.getTotalElementCount();
-        int blockingFactor = bucketHeap.getMainBucketsHeap().getBlockingFactor();
-
-        int recordsNeedingOverflow = Math.max(0, totalElements - blockingFactor);
-
-        int minOverflowBlocksNeeded;
-        if (recordsNeedingOverflow == 0) {
-            minOverflowBlocksNeeded = 0;
-        } else {
-            minOverflowBlocksNeeded = (recordsNeedingOverflow + blockingFactor - 1) / blockingFactor;
-        }
-
-        return minOverflowBlocksNeeded < currentOverflowBlocks;
-    }
-
-    private void performShaking(int bucketAddress) throws IOException {
-        Bucket<T> bucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(bucketAddress);
-        if (bucket == null || bucket.getOverflowBucketCount() == 0) {
-            return;
-        }
-
-        List<T> allRecords = new ArrayList<>();
-        bucketHeap.collectAllRecords(bucketAddress, allRecords);
-
-        if (allRecords.isEmpty()) {
-            return;
-        }
-
-        @SuppressWarnings("unchecked")
-        Class<T> recordClass = (Class<T>) allRecords.get(0).getClass();
-        bucket = new Bucket<>(
-                bucketHeap.getMainBucketsHeap().getBlockingFactor(),
-                bucketHeap.getBlockSize(),
-                recordClass);
-        bucketHeap.clearOverflowChain(bucketAddress);
-
-        for (T record : allRecords) {
-            bucketHeap.insertIntoBucket(bucketAddress, record);
-        }
-
-        updateMetadata();
-    }
-
-    private void updateMetadata() {
+    private void updateDebugInfo() {
         try {
             int calculatedOverflowBlocks = 0;
             for (int i = 0; i < totalPrimaryBuckets; i++) {
@@ -267,7 +216,7 @@ public class LinearHash<T extends StorableRecord> {
                     calculatedOverflowBlocks += bucket.getOverflowBucketCount();
                 }
             }
-            totalOverflowBlocks = calculatedOverflowBlocks;
+            debugInfoTotalOverflowBlocks = calculatedOverflowBlocks;
         } catch (IOException e) {
         }
     }
@@ -286,8 +235,8 @@ public class LinearHash<T extends StorableRecord> {
         return splitPointer;
     }
 
-    public int getTotalOverflowBlocks() {
-        return totalOverflowBlocks;
+    public int getDebugInfoTotalOverflowBlocks() {
+        return debugInfoTotalOverflowBlocks;
     }
 
     public int getTotalPrimaryBuckets() {
@@ -296,5 +245,9 @@ public class LinearHash<T extends StorableRecord> {
 
     public double getOverflowRatio() {
         return calculateOverflowRatio();
+    }
+
+    public BucketHeap<T> getBucketHeap() {
+        return bucketHeap;
     }
 }

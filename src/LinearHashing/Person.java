@@ -10,24 +10,19 @@ import java.nio.charset.StandardCharsets;
 import UnsortedFile.StorableRecord;
 
 public class Person implements StorableRecord {
-    static int sizeInBytes = 16 + 16 + 8 + 16;
+    // Size: 8 (birthdate) + 15 (name) + 1 (name length) + 14 (surname) + 1 (surname length) + 10 (patient number) + 1 (patient number length) = 50
+    static int sizeInBytes = 8 + 15 + 1 + 14 + 1 + 10 + 1;
     
-    public String name;
-    public String surname;
-    public long birthdate; 
-    public String id;
+    public String name;  // max 15 char
+    public String surname;  // max 14 char
+    public long birthdate;  // using LocalDate.now().toEpochDay()
+    public String id;  // max 10 char
 
     public Person() {}
 
     @Override
     public boolean equals(StorableRecord record) {
-        if (record == null || !(record instanceof Person)) {
-            return false;
-        }
         Person other = (Person) record;
-        if (this.id == null) {
-            return other.id == null;
-        }
         return this.id.equals(other.id);
     }
 
@@ -48,14 +43,14 @@ public class Person implements StorableRecord {
             hlpOutStream.write(nameFixed);
             hlpOutStream.writeByte(nameLength);
             byte[] surnameBytes = (surname != null ? surname : "").getBytes(StandardCharsets.US_ASCII);
-            int surnameLength = Math.min(surnameBytes.length, 15);
-            byte[] surnameFixed = new byte[15];
+            int surnameLength = Math.min(surnameBytes.length, 14);
+            byte[] surnameFixed = new byte[14];
             System.arraycopy(surnameBytes, 0, surnameFixed, 0, surnameLength);
             hlpOutStream.write(surnameFixed);
             hlpOutStream.writeByte(surnameLength);
             byte[] idBytes = (id != null ? id : "").getBytes(StandardCharsets.US_ASCII);
-            int idLength = Math.min(idBytes.length, 15);
-            byte[] idFixed = new byte[15];
+            int idLength = Math.min(idBytes.length, 10);
+            byte[] idFixed = new byte[10];
             System.arraycopy(idBytes, 0, idFixed, 0, idLength);
             hlpOutStream.write(idFixed);
             hlpOutStream.writeByte(idLength);
@@ -74,11 +69,11 @@ public class Person implements StorableRecord {
             hlpInStream.readFully(nameBytes);
             int nameLength = hlpInStream.readByte() & 0xFF;
             this.name = new String(nameBytes, 0, nameLength, StandardCharsets.US_ASCII);
-            byte[] surnameBytes = new byte[15];
+            byte[] surnameBytes = new byte[14];
             hlpInStream.readFully(surnameBytes);
             int surnameLength = hlpInStream.readByte() & 0xFF;
             this.surname = new String(surnameBytes, 0, surnameLength, StandardCharsets.US_ASCII);
-            byte[] idBytes = new byte[15];
+            byte[] idBytes = new byte[10];
             hlpInStream.readFully(idBytes);
             int idLength = hlpInStream.readByte() & 0xFF;
             this.id = new String(idBytes, 0, idLength, StandardCharsets.US_ASCII);
