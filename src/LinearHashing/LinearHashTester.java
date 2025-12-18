@@ -14,7 +14,7 @@ public class LinearHashTester {
     private static final String OVERFLOW_METADATA_FILE = "linearhash_overflow.meta";
     private static final int BLOCK_SIZE = 250; // 512;
     private static final int OVERFLOW_BLOCK_SIZE = 200; //256;
-    private static final int TOTAL_PERSONS = 1;
+    private static final int TOTAL_PERSONS = 10;
 
     private static int testsPassed = 0;
     private static int testsFailed = 0;

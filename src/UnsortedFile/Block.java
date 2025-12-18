@@ -7,41 +7,50 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class Block<T extends StorableRecord> {
-    
+
     protected int validBlockCount;
     protected T[] records;
     protected int recordSize;
     protected int blockingFactor;
     protected int blockSize;
-    
+
     public Block(int blockingFactor, int blockSize, Class<T> recordClass) {
         this.blockingFactor = blockingFactor;
         this.blockSize = blockSize;
         this.validBlockCount = 0;
         this.records = (T[]) java.lang.reflect.Array.newInstance(recordClass, blockingFactor);
-        
-        try { 
+
+        try {
             T templateInstance = recordClass.getDeclaredConstructor().newInstance();
             this.recordSize = templateInstance.sizeInBytes();
-         } catch ( Exception e) {};
+        } catch (Exception e) {
+        }
+        ;
     }
-    
+
     public T getRecord(int index) {
         return records[index];
     }
-    
+
     public T[] getAllRecordSlots() {
         // T[] allSlots = (T[]) java.lang.reflect.Array.newInstance(
-        //     records.getClass().getComponentType(), blockingFactor);
+        // records.getClass().getComponentType(), blockingFactor);
         // System.arraycopy(records, 0, allSlots, 0, blockingFactor);
         // return allSlots;
         return records;
     }
-    
+
+    public T[] getAllRecords() {
+        T[] validRecords = (T[]) java.lang.reflect.Array.newInstance(
+                records.getClass().getComponentType(), validBlockCount);
+        System.arraycopy(records, 0, validRecords, 0, validBlockCount);
+        return validRecords;
+    }
+
     public int getValidBlockCount() {
         return validBlockCount;
     }
-    
+
     public int findRecordIndex(T partialRecord) {
         for (int i = 0; i < validBlockCount; i++) {
             if (records[i] != null && partialRecord.equals(records[i])) {
@@ -50,7 +59,7 @@ public class Block<T extends StorableRecord> {
         }
         return -1;
     }
-    
+
     public boolean addRecord(T record) {
         if (validBlockCount >= blockingFactor) {
             return false;
@@ -59,20 +68,20 @@ public class Block<T extends StorableRecord> {
         validBlockCount++;
         return true;
     }
-    
+
     public boolean delete(T partialRecord) {
         int index = findRecordIndex(partialRecord);
         if (index == -1) {
             return false;
         }
-        
+
         for (int i = index; i < validBlockCount - 1; i++) {
             records[i] = records[i + 1];
         }
 
         validBlockCount--;
         records[validBlockCount] = null;
-        
+
         return true;
     }
 
@@ -84,21 +93,21 @@ public class Block<T extends StorableRecord> {
         validBlockCount = 0;
         return temp;
     }
-    
+
     public boolean isFull() {
         return validBlockCount >= blockingFactor;
     }
-    
+
     public boolean isEmpty() {
         return validBlockCount == 0;
     }
-    
+
     public byte[] ToByteArray() {
         ByteArrayOutputStream hlpByteArrayOutputStream = new ByteArrayOutputStream();
         DataOutputStream hlpOutStream = new DataOutputStream(hlpByteArrayOutputStream);
         try {
             for (int i = 0; i < blockingFactor; i++) {
-                if(i < validBlockCount) {
+                if (i < validBlockCount) {
                     byte[] recordBytes = records[i].ToByteArray();
                     hlpOutStream.write(recordBytes);
                 } else {
@@ -107,9 +116,9 @@ public class Block<T extends StorableRecord> {
                 }
             }
             hlpOutStream.writeInt(validBlockCount);
-            
+
             byte[] result = hlpByteArrayOutputStream.toByteArray();
-            
+
             if (result.length < blockSize) {
                 byte[] paddedResult = new byte[blockSize];
                 System.arraycopy(result, 0, paddedResult, 0, result.length);
@@ -120,30 +129,25 @@ public class Block<T extends StorableRecord> {
             throw new IllegalStateException("Error during conversion to byte array.", e);
         }
     }
-    
+
     public void FromByteArray(byte[] paArray, Class<T> recordClass) {
         ByteArrayInputStream hlpByteArrayInputStream = new ByteArrayInputStream(paArray);
         DataInputStream hlpInStream = new DataInputStream(hlpByteArrayInputStream);
         try {
-            byte[][] recordBytesArray = new byte[blockingFactor][];
+            byte[][] recordBytesArray = new byte[blockingFactor][recordSize];
             for (int i = 0; i < blockingFactor; i++) {
-                recordBytesArray[i] = new byte[recordSize];
                 hlpInStream.readFully(recordBytesArray[i]);
             }
-            validBlockCount = hlpInStream.readInt();
-            
+
             for (int i = 0; i < blockingFactor; i++) {
-                    try {
-                        T record = recordClass.getDeclaredConstructor().newInstance();
-                        record.FromByteArray(recordBytesArray[i]);
-                        records[i] = record;
-                    } catch (Exception e) {
-                        records[i] = null;
-                    }
+                T record = recordClass.getDeclaredConstructor().newInstance();
+                record.FromByteArray(recordBytesArray[i]);
+                records[i] = record;
             }
-        } catch (IOException e) {
+            validBlockCount = hlpInStream.readInt();
+
+        } catch (Exception e) {
             throw new IllegalStateException("Error during conversion from byte array.", e);
         }
     }
 }
-

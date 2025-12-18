@@ -10,22 +10,22 @@ import UnsortedFile.Block;
 import UnsortedFile.StorableRecord;
 
 public class OverflowBlock<T extends StorableRecord> extends Block<T> {
-    
+
     private int nextOverflowBlock;
-    
+
     public OverflowBlock(int blockingFactor, int blockSize, Class<T> recordClass) {
         super(blockingFactor, blockSize, recordClass);
         this.nextOverflowBlock = -1;
     }
-    
+
     public int getNextOverflowBlock() {
         return nextOverflowBlock;
     }
-    
+
     public void setNextOverflowBlock(int blockNumber) {
         this.nextOverflowBlock = blockNumber;
     }
-    
+
     @Override
     public byte[] ToByteArray() {
         ByteArrayOutputStream hlpByteArrayOutputStream = new ByteArrayOutputStream();
@@ -45,15 +45,16 @@ public class OverflowBlock<T extends StorableRecord> extends Block<T> {
                     hlpOutStream.write(emptyRecord);
                 }
             }
-            
+
             hlpOutStream.writeInt(nextOverflowBlock);
-            
+
             hlpOutStream.writeInt(validBlockCount);
-            
+
             byte[] result = hlpByteArrayOutputStream.toByteArray();
-            
+
             if (result.length > blockSize) {
-                throw new IllegalStateException("OverflowBlock serialization exceeds blockSize: " + result.length + " > " + blockSize);
+                throw new IllegalStateException(
+                        "OverflowBlock serialization exceeds blockSize: " + result.length + " > " + blockSize);
             }
             if (result.length < blockSize) {
                 byte[] paddedResult = new byte[blockSize];
@@ -65,7 +66,7 @@ public class OverflowBlock<T extends StorableRecord> extends Block<T> {
             throw new IllegalStateException("Error during conversion to byte array.", e);
         }
     }
-    
+
     @Override
     public void FromByteArray(byte[] paArray, Class<T> recordClass) {
         ByteArrayInputStream hlpByteArrayInputStream = new ByteArrayInputStream(paArray);
@@ -76,37 +77,17 @@ public class OverflowBlock<T extends StorableRecord> extends Block<T> {
                 recordBytesArray[i] = new byte[recordSize];
                 hlpInStream.readFully(recordBytesArray[i]);
             }
-            
+
             nextOverflowBlock = hlpInStream.readInt();
-            
+
             validBlockCount = hlpInStream.readInt();
-            
+
             for (int i = 0; i < blockingFactor; i++) {
-                if (i < validBlockCount) {
-                    try {
-                        boolean isEmpty = true;
-                        for (byte b : recordBytesArray[i]) {
-                            if (b != 0) {
-                                isEmpty = false;
-                                break;
-                            }
-                        }
-                        
-                        if (isEmpty) {
-                            records[i] = null;
-                        } else {
-                            T record = recordClass.getDeclaredConstructor().newInstance();
-                            record.FromByteArray(recordBytesArray[i]);
-                            records[i] = record;
-                        }
-                    } catch (Exception e) {
-                        records[i] = null;
-                    }
-                } else {
-                    records[i] = null;
-                }
+                T record = recordClass.getDeclaredConstructor().newInstance();
+                record.FromByteArray(recordBytesArray[i]);
+                records[i] = record;
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new IllegalStateException("Error during conversion from byte array.", e);
         }
     }

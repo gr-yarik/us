@@ -43,8 +43,8 @@ public class HeapDebuggerConsole {
             debugger.heapFilePath = args[0];
             debugger.metadataFilePath = args[1];
         } else {
-            debugger.heapFilePath = "test_heap.bin";
-            debugger.metadataFilePath = "test_heap.bin.meta";
+            debugger.heapFilePath = "autotest";
+            debugger.metadataFilePath = "autotest.meta";
             System.out.println("=== Heap File Debugger (Console) ===\n");
             System.out.println("Using default file paths:");
             System.out.println("  Heap file: " + debugger.heapFilePath);
