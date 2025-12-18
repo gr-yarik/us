@@ -213,7 +213,7 @@ public class LinearHash<T extends StorableRecord> {
             for (int i = 0; i < totalPrimaryBuckets; i++) {
                 Bucket<T> bucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(i);
                 if (bucket != null) {
-                    calculatedOverflowBlocks += bucket.getOverflowBucketCount();
+                    calculatedOverflowBlocks += bucket.getTotalOverflowBlockCount();
                 }
             }
             debugInfoTotalOverflowBlocks = calculatedOverflowBlocks;

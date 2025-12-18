@@ -11,13 +11,13 @@ import UnsortedFile.StorableRecord;
 
 public class Bucket<T extends StorableRecord> extends Block<T> {
 
-    private int overflowBucketCount;
+    private int overflowBlockCount;
     private int totalElementCount;
     private int firstOverflowBlock;
 
     public Bucket(int blockingFactor, int blockSize, Class<T> recordClass) {
         super(blockingFactor, blockSize, recordClass);
-        this.overflowBucketCount = 0;
+        this.overflowBlockCount = 0;
         this.totalElementCount = 0;
         this.firstOverflowBlock = -1;
     }
@@ -30,36 +30,28 @@ public class Bucket<T extends StorableRecord> extends Block<T> {
         this.firstOverflowBlock = blockNumber;
     }
 
-    public int getOverflowBucketCount() {
-        return overflowBucketCount;
-    }
-
-    public void setOverflowBucketCount(int count) {
-        this.overflowBucketCount = count;
-    }
-
-    public void decrementOverflowBucketCountByOne() {
-        this.overflowBucketCount--;
-    }
-
-    public void incrementOverflowBucketCountByOne() {
-        this.overflowBucketCount++;
-    }
-
-    public int getTotalElementCount() {
+    public int getTotalRecordCount() {
         return totalElementCount;
     }
 
-    public void incrementTotalElementCountByOne() {
-        this.totalElementCount++;
+    public int getTotalOverflowBlockCount() {
+        return overflowBlockCount;
+    }
+
+    public void setOverflowBlockCount(int count) {
+        this.overflowBlockCount = count;
+    }
+
+    public void incrementOverflowBlockCountBy(int howMuch) {
+        this.overflowBlockCount += howMuch;
+    }
+
+    public void decrementOverflowBlockCountBy(int howMuch) {
+        this.overflowBlockCount -= howMuch;
     }
 
     public void incrementTotalElementCountBy(int howMuch) {
         this.totalElementCount += howMuch;
-    }
-
-    public void decrementTotalElementCountByOne() {
-        this.totalElementCount--;
     }
 
     public void decrementTotalElementCountBy(int howMuch) {
@@ -73,20 +65,15 @@ public class Bucket<T extends StorableRecord> extends Block<T> {
         try {
             for (int i = 0; i < blockingFactor; i++) {
                 if (i < validBlockCount) {
-                    if (records[i] != null) {
-                        byte[] recordBytes = records[i].ToByteArray();
-                        hlpOutStream.write(recordBytes);
-                    } else {
-                        byte[] emptyRecord = new byte[recordSize];
-                        hlpOutStream.write(emptyRecord);
-                    }
+                    byte[] recordBytes = records[i].ToByteArray();
+                    hlpOutStream.write(recordBytes);
                 } else {
                     byte[] emptyRecord = new byte[recordSize];
                     hlpOutStream.write(emptyRecord);
                 }
             }
 
-            hlpOutStream.writeInt(overflowBucketCount);
+            hlpOutStream.writeInt(overflowBlockCount);
 
             hlpOutStream.writeInt(totalElementCount);
 
@@ -122,7 +109,7 @@ public class Bucket<T extends StorableRecord> extends Block<T> {
                 hlpInStream.readFully(recordBytesArray[i]);
             }
 
-            overflowBucketCount = hlpInStream.readInt();
+            overflowBlockCount = hlpInStream.readInt();
 
             totalElementCount = hlpInStream.readInt();
 

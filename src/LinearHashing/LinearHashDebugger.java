@@ -344,8 +344,8 @@ public class LinearHashDebugger extends JFrame {
                     
                     mainBucketInfos.add(new BucketInfo(
                         i, status, validCount, blockingFactor,
-                        bucket.getOverflowBucketCount(),
-                        bucket.getTotalElementCount(),
+                        bucket.getTotalOverflowBlockCount(),
+                        bucket.getTotalRecordCount(),
                         bucket.getFirstOverflowBlock(),
                         records
                     ));

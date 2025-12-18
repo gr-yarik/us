@@ -1,13 +1,7 @@
 package LinearHashing;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-
-import UnsortedFile.Block;
-import UnsortedFile.StorableRecord;
+import java.io.*;
+import UnsortedFile.*;
 
 public class OverflowBlock<T extends StorableRecord> extends Block<T> {
 
@@ -33,13 +27,8 @@ public class OverflowBlock<T extends StorableRecord> extends Block<T> {
         try {
             for (int i = 0; i < blockingFactor; i++) {
                 if (i < validBlockCount) {
-                    if (records[i] != null) {
-                        byte[] recordBytes = records[i].ToByteArray();
-                        hlpOutStream.write(recordBytes);
-                    } else {
-                        byte[] emptyRecord = new byte[recordSize];
-                        hlpOutStream.write(emptyRecord);
-                    }
+                    byte[] recordBytes = records[i].ToByteArray();
+                    hlpOutStream.write(recordBytes);
                 } else {
                     byte[] emptyRecord = new byte[recordSize];
                     hlpOutStream.write(emptyRecord);
@@ -72,9 +61,8 @@ public class OverflowBlock<T extends StorableRecord> extends Block<T> {
         ByteArrayInputStream hlpByteArrayInputStream = new ByteArrayInputStream(paArray);
         DataInputStream hlpInStream = new DataInputStream(hlpByteArrayInputStream);
         try {
-            byte[][] recordBytesArray = new byte[blockingFactor][];
+            byte[][] recordBytesArray = new byte[blockingFactor][recordSize];
             for (int i = 0; i < blockingFactor; i++) {
-                recordBytesArray[i] = new byte[recordSize];
                 hlpInStream.readFully(recordBytesArray[i]);
             }
 
