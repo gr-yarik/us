@@ -1,7 +1,9 @@
 package LinearHashing;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BiConsumer;
 
 import UnsortedFile.Block;
 import UnsortedFile.Heap;
@@ -92,7 +94,7 @@ public class BucketHeap<T extends StorableRecord> {
                         throw new IOException("Traversed and expected number of overflow buckets does not match.");
                     }
 
-                    OverflowBlock<T> newOverflow = createEmptyOverflowBlock();
+                    OverflowBlock<T> newOverflow= createEmptyOverflowBlock();
                     newOverflow.addRecord(record);
                     int newOverflowBlockNum = allocateOverflowBlock(newOverflow);
                     current.setNextOverflowBlock(newOverflowBlockNum);
@@ -420,7 +422,7 @@ public class BucketHeap<T extends StorableRecord> {
     }
 
     private int allocateOverflowBlock(OverflowBlock<T> overflowBlock) throws IOException {
-        int blockNumber = overflowHeap.getTotalBlocks();
+        int blockNumber = overflowHeap.getTotalBlockCount();
         overflowHeap.writeBlock(blockNumber, overflowBlock);
         return blockNumber;
     }
@@ -452,7 +454,7 @@ public class BucketHeap<T extends StorableRecord> {
     }
 
     public void collectAllRecords(Bucket<T> bucket, List<T> records,
-            java.util.function.BiConsumer<Bucket<T>, List<OverflowBlock<T>>> cleanupCallback) throws IOException {
+            BiConsumer<Bucket<T>, List<OverflowBlock<T>>> cleanupCallback) throws IOException {
         List<OverflowBlock<T>> overflowBlocks = new ArrayList<>();
 
         for (int i = 0; i < bucket.getValidBlockCount(); i++) {

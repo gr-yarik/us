@@ -2,8 +2,21 @@ package LinearHashing;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.io.IOException;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -319,7 +332,7 @@ public class LinearHashDebugger extends JFrame {
         mainBucketInfos.clear();
         
         Heap<Person> mainHeap = bucketHeap.getMainBucketsHeap();
-        int totalBlocks = mainHeap.getTotalBlocks();
+        int totalBlocks = mainHeap.getTotalBlockCount();
         int blockingFactor = mainHeap.getBlockingFactor();
         
         for (int i = 0; i < totalBlocks; i++) {
@@ -360,7 +373,7 @@ public class LinearHashDebugger extends JFrame {
         overflowBlockInfos.clear();
         
         Heap<Person> overflowHeap = bucketHeap.getOverflowHeap();
-        int totalBlocks = overflowHeap.getTotalBlocks();
+        int totalBlocks = overflowHeap.getTotalBlockCount();
         int blockingFactor = overflowHeap.getBlockingFactor();
         
         for (int i = 0; i < totalBlocks; i++) {

@@ -100,8 +100,8 @@ public class LinearHash<T extends StorableRecord> {
     }
 
     private double calculateOverflowRatio() {
-        int mainBlocks = bucketHeap.getMainBucketsHeap().totalBlockCount();
-        int overflowBlocks = bucketHeap.getOverflowHeap().totalBlockCount();
+        int mainBlocks = bucketHeap.getMainBucketsHeap().getTotalBlockCount();
+        int overflowBlocks = bucketHeap.getOverflowHeap().getTotalBlockCount();
         return (double) overflowBlocks / mainBlocks;
     }
 

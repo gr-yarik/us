@@ -1,44 +1,59 @@
 package UnsortedFile;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.RandomAccessFile;
 
 public class BinaryFile {
     
     private RandomAccessFile file;
     
-    public BinaryFile(String pathToFile) throws IOException {
+    public BinaryFile(String pathToFile) {
         File f = new File(pathToFile);
         
-        this.file = new RandomAccessFile(f, "rw");
+        try {
+            this.file = new RandomAccessFile(f, "rw");
+        } catch (Exception e){}
     }
     
-    public void seek(long position) throws IOException {
-        file.seek(position);
+    public void seek(long position) {
+        try {
+            file.seek(position);
+        } catch (Exception e){}
     }
     
-    public long getSize() throws IOException {
-        return file.length();
+    public long getSize() {
+        try {
+            return file.length();
+        } catch (Exception e){}
+        throw new Error();
     }
     
-    public void write(byte[] data) throws IOException {
-        file.write(data);
+    public void write(byte[] data) {
+        try {
+            file.write(data);
+        } catch (Exception e){}
     }
     
-    public byte[] read(int length) throws IOException {
-        byte[] data = new byte[length];
-        file.readFully(data);
-        return data;
+    public byte[] read(int length) {
+        try {
+            byte[] data = new byte[length];
+            file.readFully(data);
+            return data;
+        } catch (Exception e){}
+        throw new Error();
     }
     
-    public void truncate(long length) throws IOException {
-        file.setLength(length);
+    public void truncate(long length) {
+        try {
+            file.setLength(length);
+        } catch (Exception e){}
     }
     
-    public void close() throws IOException {
-        if (file != null) {
-            file.close();
-        }
+    public void close() {
+        try {
+            if (file != null) {
+                file.close();
+            }
+        } catch (Exception e){}
     }
 }

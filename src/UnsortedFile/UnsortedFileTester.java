@@ -1,10 +1,12 @@
 package UnsortedFile;
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
+import java.util.Scanner;
 
 
 class Person implements StorableRecord {
@@ -96,8 +98,8 @@ public class UnsortedFileTester {
         System.out.println("=== Heap Test ===");
         
         try {
-            java.io.File heapFile = new java.io.File(HEAP_FILE_PATH);
-            java.io.File metaFile = new java.io.File(METADATA_FILE_PATH);
+            File heapFile = new File(HEAP_FILE_PATH);
+            File metaFile = new File(METADATA_FILE_PATH);
             boolean filesExist = heapFile.exists() && metaFile.exists() && heapFile.length() > 0 && metaFile.length() > 0;
             
             Heap<Person> heap;
@@ -274,7 +276,7 @@ public class UnsortedFileTester {
     }
     
     private static void runInteractiveMenu(Heap<Person> heap) {
-        java.util.Scanner scanner = new java.util.Scanner(System.in);
+        Scanner scanner = new Scanner(System.in);
         
         while (true) {
             System.out.println("\n" + repeatString("=", 60));
@@ -312,7 +314,7 @@ public class UnsortedFileTester {
         }
     }
     
-    private static void handleInsertUser(Heap<Person> heap, java.util.Scanner scanner) {
+    private static void handleInsertUser(Heap<Person> heap, Scanner scanner) {
         System.out.println("\n--- Insert User by ID ---");
         System.out.print("Enter user ID: ");
         String id = scanner.nextLine().trim();
@@ -328,7 +330,7 @@ public class UnsortedFileTester {
         }
     }
     
-    private static void handleFindUser(Heap<Person> heap, java.util.Scanner scanner) {
+    private static void handleFindUser(Heap<Person> heap, Scanner scanner) {
         System.out.println("\n--- Find User by ID ---");
         System.out.print("Enter user ID to search: ");
         String id = scanner.nextLine().trim();
@@ -368,7 +370,7 @@ public class UnsortedFileTester {
         }
     }
     
-    private static void handleDeleteUser(Heap<Person> heap, java.util.Scanner scanner) {
+    private static void handleDeleteUser(Heap<Person> heap, Scanner scanner) {
         System.out.println("\n--- Delete User by ID ---");
         System.out.print("Enter user ID to delete: ");
         String id = scanner.nextLine().trim();
@@ -411,7 +413,7 @@ public class UnsortedFileTester {
         }
     }
     
-    private static void handlePopulateHeap(Heap<Person> heap, java.util.Scanner scanner) {
+    private static void handlePopulateHeap(Heap<Person> heap, Scanner scanner) {
         System.out.println("\n--- Populate Heap ---");
         System.out.print("Enter number of users to insert (default: 30): ");
         String input = scanner.nextLine().trim();

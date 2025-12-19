@@ -1,5 +1,6 @@
 
 package javaapplication1;
+import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.function.Consumer;
@@ -415,12 +416,12 @@ public class BSTree {
     }
 
     private static final class AsciiBox {
-        java.util.List<String> lines;
+        List<String> lines;
         int width;
         int height;
         int middle;
 
-        AsciiBox(java.util.List<String> lines, int width, int height, int middle) {
+        AsciiBox(List<String> lines, int width, int height, int middle) {
             this.lines = lines;
             this.width = width;
             this.height = height;
@@ -438,7 +439,7 @@ public class BSTree {
         AsciiBox right = buildAsciiBox(node.getRightChild());
 
         if (left.width == 0 && right.width == 0) {
-            java.util.List<String> lines = new ArrayList<>();
+            List<String> lines = new ArrayList<>();
             lines.add(label);
             return new AsciiBox(lines, label.length(), 1, label.length() / 2);
         }
@@ -449,7 +450,7 @@ public class BSTree {
             String line1 = repeat(' ', leftMiddle + 1) + repeat('_', leftRest) + label;
             String line2 = repeat(' ', leftMiddle) + '/' + repeat(' ', leftRest + label.length());
 
-            java.util.List<String> merged = mergeLeft(left.lines, label.length());
+            List<String> merged = mergeLeft(left.lines, label.length());
             merged.add(0, line2);
             merged.add(0, line1);
 
@@ -463,7 +464,7 @@ public class BSTree {
             String line1 = label + repeat('_', rightMiddle) + repeat(' ', right.width - rightMiddle);
             String line2 = repeat(' ', label.length() + rightMiddle) + '\\' + repeat(' ', right.width - rightMiddle - 1);
 
-            java.util.List<String> merged = mergeRight(right.lines, label.length());
+            List<String> merged = mergeRight(right.lines, label.length());
             merged.add(0, line2);
             merged.add(0, line1);
 
@@ -479,7 +480,7 @@ public class BSTree {
         String line2 = repeat(' ', leftMiddle) + '/' + repeat(' ', left.width - leftMiddle - 1 + label.length() + rightMiddle)
                 + '\\' + repeat(' ', right.width - rightMiddle - 1);
 
-        java.util.List<String> mergedChildren = mergeBoth(left.lines, right.lines, label.length());
+        List<String> mergedChildren = mergeBoth(left.lines, right.lines, label.length());
         mergedChildren.add(0, line2);
         mergedChildren.add(0, line1);
 
@@ -488,25 +489,25 @@ public class BSTree {
         return new AsciiBox(mergedChildren, width, mergedChildren.size(), left.width + label.length() / 2);
     }
 
-    private java.util.List<String> mergeLeft(java.util.List<String> leftLines, int labelWidth) {
-        java.util.List<String> merged = new ArrayList<>(leftLines.size());
+    private List<String> mergeLeft(List<String> leftLines, int labelWidth) {
+        List<String> merged = new ArrayList<>(leftLines.size());
         for (String l : leftLines) {
             merged.add(l + repeat(' ', labelWidth));
         }
         return merged;
     }
 
-    private java.util.List<String> mergeRight(java.util.List<String> rightLines, int labelWidth) {
-        java.util.List<String> merged = new ArrayList<>(rightLines.size());
+    private List<String> mergeRight(List<String> rightLines, int labelWidth) {
+        List<String> merged = new ArrayList<>(rightLines.size());
         for (String r : rightLines) {
             merged.add(repeat(' ', labelWidth) + r);
         }
         return merged;
     }
 
-    private java.util.List<String> mergeBoth(java.util.List<String> leftLines, java.util.List<String> rightLines, int labelWidth) {
+    private List<String> mergeBoth(List<String> leftLines, List<String> rightLines, int labelWidth) {
         int height = Math.max(leftLines.size(), rightLines.size());
-        java.util.List<String> merged = new ArrayList<>(height);
+        List<String> merged = new ArrayList<>(height);
         for (int i = 0; i < height; i++) {
             String leftLine = i < leftLines.size() ? leftLines.get(i) : repeat(' ', leftLines.get(0).length());
             String rightLine = i < rightLines.size() ? rightLines.get(i) : repeat(' ', rightLines.get(0).length());
@@ -515,7 +516,7 @@ public class BSTree {
         return merged;
     }
 
-    private void padLinesToWidth(java.util.List<String> lines, int width) {
+    private void padLinesToWidth(List<String> lines, int width) {
         for (int i = 0; i < lines.size(); i++) {
             String s = lines.get(i);
             if (s.length() < width) {
@@ -527,7 +528,7 @@ public class BSTree {
     private String repeat(char ch, int count) {
         if (count <= 0) return "";
         char[] arr = new char[count];
-        java.util.Arrays.fill(arr, ch);
+        Arrays.fill(arr, ch);
         return new String(arr);
     }
     

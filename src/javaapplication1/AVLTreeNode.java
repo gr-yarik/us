@@ -1,5 +1,8 @@
 package javaapplication1;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 public class AVLTreeNode extends BSTreeNode {
     
     byte balanceFactor = 0;
@@ -37,7 +40,7 @@ public class AVLTreeNode extends BSTreeNode {
             return -1;
         }
         
-        java.util.Queue<AVLTreeNode> queue = new java.util.LinkedList<>();
+        Queue<AVLTreeNode> queue = new LinkedList<>();
         queue.offer(node);
         int height = -1;
         
