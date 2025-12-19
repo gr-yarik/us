@@ -67,15 +67,15 @@ public class Person implements StorableRecord {
             this.birthdate = hlpInStream.readLong();
             byte[] nameBytes = new byte[15];
             hlpInStream.readFully(nameBytes);
-            int nameLength = hlpInStream.readByte() & 0xFF;
+            int nameLength = hlpInStream.readByte();
             this.name = new String(nameBytes, 0, nameLength, StandardCharsets.US_ASCII);
             byte[] surnameBytes = new byte[14];
             hlpInStream.readFully(surnameBytes);
-            int surnameLength = hlpInStream.readByte() & 0xFF;
+            int surnameLength = hlpInStream.readByte();
             this.surname = new String(surnameBytes, 0, surnameLength, StandardCharsets.US_ASCII);
             byte[] idBytes = new byte[10];
             hlpInStream.readFully(idBytes);
-            int idLength = hlpInStream.readByte() & 0xFF;
+            int idLength = hlpInStream.readByte();
             this.id = new String(idBytes, 0, idLength, StandardCharsets.US_ASCII);
         } catch (IOException e) {
             throw new IllegalStateException("Error during conversion from byte array.");

@@ -195,7 +195,7 @@ public class HeapDebugger extends JFrame {
                     }
                     
                     List<Person> records = new ArrayList<>();
-                    Person[] allSlots = block.getAllRecordSlots();
+                    Person[] allSlots = block.debugGetAllRecords();
                     for (int j = 0; j < blockingFactor; j++) {
                         records.add(allSlots[j]);
                     }

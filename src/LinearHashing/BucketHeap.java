@@ -194,7 +194,7 @@ public class BucketHeap<T extends StorableRecord> {
         List<Integer> overflowBlockNumbers = new ArrayList<>();
         List<OverflowBlock<T>> overflowBlockInstances = new ArrayList<>();
 
-        Collections.addAll(collectedRecords, bucket.getAllRecordSlots());
+        Collections.addAll(collectedRecords, bucket.getAllValidRecords());
 
         // Traverse overflow chain until record is found or end is reached
         for (int blockNum = nextBlockNumberRef[0]; blockNum != -1; blockNum = nextBlockNumberRef[0]) {
@@ -208,7 +208,7 @@ public class BucketHeap<T extends StorableRecord> {
                             deletionOccurred[0] = true;
                             overflowBlockNumbers.add(currentBlockNum);
                             overflowBlockInstances.add((OverflowBlock<T>) block);
-                            Collections.addAll(collectedRecords, block.getAllRecordSlots());
+                            Collections.addAll(collectedRecords, block.getAllValidRecords());
 
                             bucket.decrementTotalElementCountBy(1);
 
@@ -256,7 +256,7 @@ public class BucketHeap<T extends StorableRecord> {
 
                         overflowBlockNumbers.add(currentBlockNum);
                         overflowBlockInstances.add(overflowBlockObj);
-                        Collections.addAll(collectedRecords, overflowBlockObj.getAllRecordSlots());
+                        Collections.addAll(collectedRecords, overflowBlockObj.debugGetAllRecords());
 
                         previousOverflowBlockInstance[0] = overflowBlockObj;
                         previousOverflowBlockNumber[0] = currentBlockNum;
@@ -297,7 +297,7 @@ public class BucketHeap<T extends StorableRecord> {
         for (int i = overflowBlockInstances.getLast().getNextOverflowBlock(); i != -1;) {
             OverflowBlock<T> block = overflowHeap.readBlock(i, OverflowBlock.class);
 
-            Collections.addAll(collectedRecords, block.getAllRecordSlots());
+            Collections.addAll(collectedRecords, block.debugGetAllRecords());
             overflowBlockNumbers.add(i);
             overflowBlockInstances.add(block);
 
@@ -350,19 +350,19 @@ public class BucketHeap<T extends StorableRecord> {
             OverflowBlock<T> overflowBlock = overflowBlockInstances.get(overflowBlockIndex);
             int blockNum = overflowBlockNumbers.get(overflowBlockIndex);
 
-            // Link previous overflow block to this one
-            if (overflowBlockIndex == 0) {
+            // // Link previous overflow block to this one
+            // if (overflowBlockIndex == 0) {
                 // This is the first overflow block
-                bucketInstance.setFirstOverflowBlock(blockNum);
+                //bucketInstance.setFirstOverflowBlock(blockNum);
                 bucketInstance.incrementOverflowBlockCountBy(1);
-            } else {
-                // Link previous block to this one
-                int prevBlockNum = overflowBlockNumbers.get(overflowBlockIndex - 1);
-                OverflowBlock<T> prevBlock = overflowBlockInstances.get(overflowBlockIndex - 1);
-                prevBlock.setNextOverflowBlock(blockNum);
-                // overflowHeap.writeBlock(prevBlockNum, prevBlock);
-                bucketInstance.incrementOverflowBlockCountBy(1);
-            }
+            // } else {
+            //     // Link previous block to this one
+            //     int prevBlockNum = overflowBlockNumbers.get(overflowBlockIndex - 1);
+            //     OverflowBlock<T> prevBlock = overflowBlockInstances.get(overflowBlockIndex - 1);
+            //     prevBlock.setNextOverflowBlock(blockNum);
+            //     // overflowHeap.writeBlock(prevBlockNum, prevBlock);
+            //     bucketInstance.incrementOverflowBlockCountBy(1);
+            // }
 
             // Fill the overflow block
             while (recordIndex < collectedRecords.size() && !overflowBlock.isFull()) {

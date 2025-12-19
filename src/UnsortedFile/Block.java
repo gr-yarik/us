@@ -23,16 +23,14 @@ public class Block<T extends StorableRecord> {
         try {
             T templateInstance = recordClass.getDeclaredConstructor().newInstance();
             this.recordSize = templateInstance.sizeInBytes();
-        } catch (Exception e) {
-        }
-        ;
+        } catch (Exception e) { }
     }
 
     public T getRecord(int index) {
         return records[index];
     }
 
-    public T[] getAllRecordSlots() {
+    public T[] debugGetAllRecords() {
         // T[] allSlots = (T[]) java.lang.reflect.Array.newInstance(
         // records.getClass().getComponentType(), blockingFactor);
         // System.arraycopy(records, 0, allSlots, 0, blockingFactor);
@@ -40,7 +38,7 @@ public class Block<T extends StorableRecord> {
         return records;
     }
 
-    public T[] getAllRecords() {
+    public T[] getAllValidRecords() {
         T[] validRecords = (T[]) java.lang.reflect.Array.newInstance(
                 records.getClass().getComponentType(), validBlockCount);
         System.arraycopy(records, 0, validRecords, 0, validBlockCount);

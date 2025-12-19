@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import UnsortedFile.StorableRecord;
 
 public class PCR implements StorableRecord {
+    
     // Size: 8 (date/time) + 10 (patient number) + 1 (patient number length) + 4 (test code) + 1 (test result) + 8 (test value) + 11 (note) + 1 (note length) = 44
     static int sizeInBytes = 8 + 10 + 1 + 4 + 1 + 8 + 11 + 1;
     
@@ -69,14 +70,14 @@ public class PCR implements StorableRecord {
             this.dateTime = hlpInStream.readLong();
             byte[] patientNumberBytes = new byte[10];
             hlpInStream.readFully(patientNumberBytes);
-            int patientNumberLength = hlpInStream.readByte() & 0xFF;
+            int patientNumberLength = hlpInStream.readByte();
             this.patientNumber = new String(patientNumberBytes, 0, patientNumberLength, StandardCharsets.US_ASCII);
             this.testCode = hlpInStream.readInt();
             this.testResult = hlpInStream.readBoolean();
             this.testValue = hlpInStream.readDouble();
             byte[] noteBytes = new byte[11];
             hlpInStream.readFully(noteBytes);
-            int noteLength = hlpInStream.readByte() & 0xFF;
+            int noteLength = hlpInStream.readByte();
             this.note = new String(noteBytes, 0, noteLength, StandardCharsets.US_ASCII);
         } catch (IOException e) {
             throw new IllegalStateException("Error during conversion from byte array.");

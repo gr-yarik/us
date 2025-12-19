@@ -337,7 +337,7 @@ public class LinearHashDebugger extends JFrame {
                     }
                     
                     List<Person> records = new ArrayList<>();
-                    Person[] allSlots = bucket.getAllRecordSlots();
+                    Person[] allSlots = bucket.debugGetAllRecords();
                     for (int j = 0; j < blockingFactor; j++) {
                         records.add(allSlots[j]);
                     }
@@ -378,7 +378,7 @@ public class LinearHashDebugger extends JFrame {
                     }
                     
                     List<Person> records = new ArrayList<>();
-                    Person[] allSlots = overflowBlock.getAllRecordSlots();
+                    Person[] allSlots = overflowBlock.debugGetAllRecords();
                     for (int j = 0; j < blockingFactor; j++) {
                         records.add(allSlots[j]);
                     }

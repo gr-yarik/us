@@ -59,6 +59,10 @@ public class BlockManager {
         emptyBlocks.remove(Integer.valueOf(minIndex));
         return minIndex;
     }
+
+    public void manageEmptyBlock(int blockNumber) {
+        emptyBlocks.add(blockNumber);
+    }
     
     public void updateAfterInsert(int blockIndex, int validCount, int blockingFactor, int blockSize) {
         emptyBlocks.remove(Integer.valueOf(blockIndex));
