@@ -14,12 +14,12 @@ public class Heap<T extends StorableRecord> {
     private Class<T> recordClass;
     private BinaryFile binaryFile;
     private BlockManager blockManager;
-    private boolean sequentialMode;
+    private boolean directBlockAddressingMode;
 
-    public Heap(String pathToFile, int blockSize, Class<T> recordClass, boolean sequentialMode, int reservedBytes) {
+    public Heap(String pathToFile, int blockSize, Class<T> recordClass, boolean directBlockAddressingMode, int reservedBytes) {
         try {
             this.recordClass = recordClass;
-            this.sequentialMode = sequentialMode;
+            this.directBlockAddressingMode = directBlockAddressingMode;
 
             File heapFile = new File(pathToFile);
 
@@ -41,7 +41,7 @@ public class Heap<T extends StorableRecord> {
 
                 this.binaryFile = new BinaryFile(pathToFile);
 
-                if (sequentialMode) {
+                if (directBlockAddressingMode) {
                     this.blockManager = null;
                 }
             } else {
@@ -71,7 +71,7 @@ public class Heap<T extends StorableRecord> {
     }
 
     public int insert(T instance) {
-        if (sequentialMode) {
+        if (directBlockAddressingMode) {
             throw new Error("Cannot use insert() in sequential mode.");
         }
 
@@ -92,15 +92,14 @@ public class Heap<T extends StorableRecord> {
         }
 
         if (blockNumber == -1) {
-            long fileSize = binaryFile.getSize();
-            blockNumber = (int) (fileSize / blockSize);
+            blockNumber = getNumberForNewBlock();
             block = new Block<>(blockingFactor, blockSize, recordClass);
         }
 
         boolean added = block.addRecord(instance);
 
         if (!added) {
-            throw new RuntimeException("Could not insert a record. This should not happen.");
+            throw new Error("Could not insert a record. This should not happen.");
         }
 
         writeBlock(blockNumber, block);
@@ -112,7 +111,6 @@ public class Heap<T extends StorableRecord> {
     }
 
     public T get(int blockNumber, T partialRecord) {
-
         Block<T> block = readBlock(blockNumber);
         if (block == null) {
             return null;
@@ -124,12 +122,9 @@ public class Heap<T extends StorableRecord> {
         }
 
         return block.getRecord(recordIndex);
-
     }
 
-    public boolean delete(int blockNumber, T partialRecord, Consumer<Block<T>> onSuccessDelete,
-            Consumer<Block<T>> onUnsuccessDelete) {
-        try {
+    public boolean delete(int blockNumber, T partialRecord, Consumer<Block<T>> onSuccessDelete, Consumer<Block<T>> onUnsuccessDelete) {
             Block<T> block = readBlock(blockNumber);
 
             int recordIndex = block.findRecordIndex(partialRecord);
@@ -142,7 +137,7 @@ public class Heap<T extends StorableRecord> {
             if (deleted) {
                 int newValidCount = block.getValidBlockCount();
 
-                if (!sequentialMode) {
+                if (!directBlockAddressingMode) {
                     blockManager.updateAfterDelete(blockNumber, newValidCount, blockingFactor, blockSize);
                 }
 
@@ -150,11 +145,11 @@ public class Heap<T extends StorableRecord> {
                     onSuccessDelete.accept(block);
                 }
 
-                if (block.isEmpty() && !sequentialMode) {
+                writeBlock(blockNumber, block);
+
+                if (block.isEmpty() && !directBlockAddressingMode) {
                     truncateAtTheEndIfPossible();
-                } else {
-                    writeBlock(blockNumber, block);
-                }
+                } 
 
                 return true;
             }
@@ -165,10 +160,16 @@ public class Heap<T extends StorableRecord> {
     }
 
     public int getTotalBlockCount() {
+        return getNumberForNewBlock();
+    }
 
+    public int getNumberForNewBlock() {
         long fileSize = binaryFile.getSize();
         return (int) (fileSize / blockSize);
+    }
 
+    public int getEmptyBlock() {
+        return blockManager.getNextEmptyBlock();
     }
 
     private int countConsecutiveEmptyBlocksAtEnd() {
@@ -195,7 +196,7 @@ public class Heap<T extends StorableRecord> {
         blockManager.manageEmptyBlock(blockNumber);
     }
 
-    private void truncateAtTheEndIfPossible() {
+    public void truncateAtTheEndIfPossible() {
         long fileSize = binaryFile.getSize();
         int totalBlocks = (int) (fileSize / blockSize);
 
@@ -216,14 +217,14 @@ public class Heap<T extends StorableRecord> {
     }
 
     public Block<T> readBlock(int blockNumber) {
-        if (sequentialMode) {
+        if (directBlockAddressingMode) {
             return readBlock(blockNumber, Bucket.class);
         } else {
             return readBlock(blockNumber, Block.class);
         }
     }
 
-    public boolean checkIfBlockExists(int blockNumber) throws IOException {
+    public boolean checkIfBlockExists(int blockNumber) {
         long position = (long) blockNumber * blockSize;
         return position < binaryFile.getSize();
     }
@@ -256,19 +257,19 @@ public class Heap<T extends StorableRecord> {
         binaryFile.write(blockData);
     }
 
-    public void extendToBlockCount(int blockCount) {
-        if (!sequentialMode) {
-            throw new Error("Cannot be used in classic heap");
-        }
+    // public void extendToBlockCount(int blockCount) {
+    //     if (!sequentialMode) {
+    //         throw new Error("Cannot be used in classic heap");
+    //     }
 
-        int currentBlocks = getTotalBlockCount();
-        if (blockCount > currentBlocks) {
-            for (int i = currentBlocks; i < blockCount; i++) {
-                Block<T> emptyBlock = new Bucket<>(blockingFactor, blockSize, recordClass);
-                writeBlock(i, emptyBlock);
-            }
-        }
-    }
+    //     int currentBlocks = getTotalBlockCount();
+    //     if (blockCount > currentBlocks) {
+    //         for (int i = currentBlocks; i < blockCount; i++) {
+    //             Block<T> emptyBlock = new Bucket<>(blockingFactor, blockSize, recordClass);
+    //             writeBlock(i, emptyBlock);
+    //         }
+    //     }
+    // }
 
     public int getBlockSize() {
         return blockSize;
