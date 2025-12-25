@@ -1,10 +1,7 @@
 package UnsortedFile;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.util.*;
 
 public class Block<T extends StorableRecord> {
 
@@ -38,10 +35,11 @@ public class Block<T extends StorableRecord> {
         return records;
     }
 
-    public T[] getAllValidRecords() {
-        T[] validRecords = (T[]) java.lang.reflect.Array.newInstance(
-                records.getClass().getComponentType(), validBlockCount);
-        System.arraycopy(records, 0, validRecords, 0, validBlockCount);
+    public List<T> getAllValidRecords() {
+        List<T> validRecords = new ArrayList<>();
+        for (int i = 0; i < validBlockCount; i++) {
+            validRecords.add(records[i]);
+        }
         return validRecords;
     }
 

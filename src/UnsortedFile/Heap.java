@@ -279,7 +279,7 @@ public class Heap<T extends StorableRecord> {
         return blockingFactor;
     }
 
-    public void close() throws IOException {
+    public void close() {
         if (blockManager != null) {
             blockManager.close();
         }

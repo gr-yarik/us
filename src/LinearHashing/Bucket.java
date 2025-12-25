@@ -22,6 +22,24 @@ public class Bucket<T extends StorableRecord> extends Block<T> {
         this.firstOverflowBlock = -1;
     }
 
+    @Override
+    public boolean addRecord(T record) {
+        boolean added = super.addRecord(record);
+        if (added) {
+            this.totalElementCount++;
+        }
+        return added;
+    }
+
+    @Override
+    public boolean delete(T record) {
+        boolean deleted = super.delete(record);
+        if (deleted) {
+            this.totalElementCount--;
+        }
+        return deleted;
+    }
+
     public int getFirstOverflowBlock() {
         return firstOverflowBlock;
     }
