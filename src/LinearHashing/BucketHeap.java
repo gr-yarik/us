@@ -49,7 +49,6 @@ public class BucketHeap<T extends StorableRecord> {
         if (!bucket.isFull()) {
             boolean inserted = bucket.addRecord(record);
             if (inserted) {
-                bucket.incrementTotalElementCountBy(1);
                 mainBucketsHeap.writeBlock(bucketNumber, bucket);
                 return true;
             }
@@ -149,7 +148,6 @@ public class BucketHeap<T extends StorableRecord> {
                 // record was found in the main bucket and deleted
                 (Block<T> block) -> {
                     Bucket<T> bucket = (Bucket<T>) block;
-                    bucket.decrementTotalElementCountBy(1);
 
                     int minRequiredOverflowBlocks = minimalRequiredOverflowBlockNumber(
                             bucket.getTotalRecordCount());
@@ -288,7 +286,6 @@ public class BucketHeap<T extends StorableRecord> {
         bucket.setOverflowBlockCount(0);
 
         int currentRecordIndex = 0;
-
         while (currentRecordIndex < collectedRecords.size() && !bucket.isFull()) {
             bucket.addRecord(collectedRecords.get(currentRecordIndex));
             currentRecordIndex++;
@@ -339,17 +336,15 @@ public class BucketHeap<T extends StorableRecord> {
 
     private T searchOverflowChain(int firstOverflowBlock, T partialRecord) {
         OverflowBlock<T> current = overflowHeap.readBlock(firstOverflowBlock, OverflowBlock.class);
-        while (current != null) {
-            int index = current.findRecordIndex(partialRecord);
-            if (index != -1) {
-                return current.getRecord(index);
+        while (true) {
+            if (current.getRecord(partialRecord) != null) {
+                return current.getRecord(partialRecord);
             }
             if (current.getNextOverflowBlock() == -1) {
-                break;
+                return null;
             }
             current = overflowHeap.readBlock(current.getNextOverflowBlock(), OverflowBlock.class);
         }
-        return null;
     }
 
     public void collectAllRecords(int bucketNumber, List<T> records) {
@@ -366,11 +361,7 @@ public class BucketHeap<T extends StorableRecord> {
     public void collectAllRecords(Bucket<T> bucket, List<T> records,
             BiConsumer<Bucket<T>, List<OverflowBlock<T>>> cleanupCallback) {
         List<OverflowBlock<T>> overflowBlocks = new ArrayList<>();
-
-        for (int i = 0; i < bucket.getValidBlockCount(); i++) {
-            T record = bucket.getRecord(i);
-            records.add(record);
-        }
+        records.addAll(bucket.getAllValidRecords());
 
         int firstOverflowBlock = bucket.getFirstOverflowBlock();
         if (firstOverflowBlock != -1) {

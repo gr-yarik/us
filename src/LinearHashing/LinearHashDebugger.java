@@ -1,11 +1,18 @@
 package LinearHashing;
 
 import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.IOException;
 import javax.swing.JButton;
 import javax.swing.JFrame;

@@ -56,6 +56,11 @@ public class Block<T extends StorableRecord> {
         return -1;
     }
 
+    public T getRecord(T partialRecord) {
+        int index = findRecordIndex(partialRecord);
+        return index == -1 ? null : getRecord(index);
+    }
+
     public boolean addRecord(T record) {
         if (validBlockCount >= blockingFactor) {
             return false;
