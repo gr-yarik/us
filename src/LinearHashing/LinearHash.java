@@ -23,7 +23,7 @@ public class LinearHash<T extends StorableRecord> {
     private int debugInfoTotalOverflowBlocks;
 
     public LinearHash(String mainBucketsPath, String overflowBlocksPath, int mainBucketsBlockSize,
-            int overflowBlockSize, Class<T> recordClass, Function<T, Integer> keyExtractor) throws IOException {
+            int overflowBlockSize, Class<T> recordClass, Function<T, Integer> keyExtractor) {
         this.keyExtractor = keyExtractor;
         this.bucketHeap = new BucketHeap<>(mainBucketsPath, overflowBlocksPath, mainBucketsBlockSize, overflowBlockSize,
                 recordClass);
@@ -56,7 +56,7 @@ public class LinearHash<T extends StorableRecord> {
         return address;
     }
 
-    public boolean insert(T record) throws IOException {
+    public boolean insert(T record) {
         int key = keyExtractor.apply(record);
         int bucketAddress = calculateBucketAddress(key);
 
@@ -72,26 +72,26 @@ public class LinearHash<T extends StorableRecord> {
         return inserted;
     }
 
-    public T get(T partialRecord) throws IOException {
+    public T get(T partialRecord) {
         int key = keyExtractor.apply(partialRecord);
         int bucketAddress = calculateBucketAddress(key);
 
         return bucketHeap.get(bucketAddress, partialRecord);
     }
 
-    public boolean delete(T partialRecord) throws IOException {
+    public boolean delete(T partialRecord) {
         int key = keyExtractor.apply(partialRecord);
         int bucketAddress = calculateBucketAddress(key);
 
         boolean deleted = bucketHeap.delete(bucketAddress, partialRecord);
         if (deleted) {
             updateDebugInfo();
-            checkAndMerge();
+            mergeIfNeeded();
         }
         return deleted;
     }
 
-    private void checkAndMerge() throws IOException {
+    private void mergeIfNeeded() {
         double overflowRatio = calculateOverflowRatio();
         // Ak hustota d klesla pod hranicu
         if (overflowRatio < MERGE_THRESHOLD && totalPrimaryBuckets > M) {
@@ -105,10 +105,10 @@ public class LinearHash<T extends StorableRecord> {
         return (double) overflowBlocks / mainBlocks;
     }
 
-    private void performSplit() throws IOException {
+    private void performSplit() {
         Bucket<T> bucketToSplit = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(splitPointer);
         List<T> allRecords = new ArrayList<>();
-        
+
         bucketHeap.collectAllRecords(bucketToSplit, allRecords, (bucket, overflowBlocks) -> {
 
             bucket.deleteAllRecords();
@@ -119,19 +119,12 @@ public class LinearHash<T extends StorableRecord> {
             }
         });
 
-        Class<T> recordClass = (Class<T>) allRecords.get(0).getClass();
-
-        Bucket<T> newBucket = new Bucket<>(
-                bucketHeap.getMainBucketsHeap().getBlockingFactor(),
-                bucketHeap.getBlockSize(),
-                recordClass);
-
         int newBucketAddress = splitPointer + (M * (1 << level));
         // bucketHeap.ensureBucketExists(newBucketAddress);
 
         bucketHeap.clearOverflowChain(splitPointer);
 
-        for (T record: allRecords) {
+        for (T record : allRecords) {
             int recordKey = keyExtractor.apply(record);
             int newAddress = hashNext(recordKey);
 
@@ -152,7 +145,7 @@ public class LinearHash<T extends StorableRecord> {
         updateDebugInfo();
     }
 
-    private void performMerge() throws IOException {
+    private void performMerge() {
         int a; // last group address
         int b; // target group address
 
@@ -188,7 +181,6 @@ public class LinearHash<T extends StorableRecord> {
             bucketHeap.insertIntoBucket(b, record);
         }
 
-        @SuppressWarnings("unchecked")
         Class<T> recordClass = (Class<T>) recordsToMerge.get(0).getClass();
         Bucket<T> emptyBucket = new Bucket<>(
                 bucketHeap.getMainBucketsHeap().getBlockingFactor(),
@@ -208,17 +200,14 @@ public class LinearHash<T extends StorableRecord> {
     }
 
     private void updateDebugInfo() {
-        try {
-            int calculatedOverflowBlocks = 0;
-            for (int i = 0; i < totalPrimaryBuckets; i++) {
-                Bucket<T> bucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(i);
-                if (bucket != null) {
-                    calculatedOverflowBlocks += bucket.getTotalOverflowBlockCount();
-                }
+        int calculatedOverflowBlocks = 0;
+        for (int i = 0; i < totalPrimaryBuckets; i++) {
+            Bucket<T> bucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(i);
+            if (bucket != null) {
+                calculatedOverflowBlocks += bucket.getTotalOverflowBlockCount();
             }
-            debugInfoTotalOverflowBlocks = calculatedOverflowBlocks;
-        } catch (IOException e) {
         }
+        debugInfoTotalOverflowBlocks = calculatedOverflowBlocks;
     }
 
     public void close() throws IOException {

@@ -257,19 +257,19 @@ public class Heap<T extends StorableRecord> {
         binaryFile.write(blockData);
     }
 
-    // public void extendToBlockCount(int blockCount) {
-    //     if (!sequentialMode) {
-    //         throw new Error("Cannot be used in classic heap");
-    //     }
+    public void extendToBlockCount(int blockCount) {
+        if (!directBlockAddressingMode) {
+            throw new Error("Cannot be used in classic heap");
+        }
 
-    //     int currentBlocks = getTotalBlockCount();
-    //     if (blockCount > currentBlocks) {
-    //         for (int i = currentBlocks; i < blockCount; i++) {
-    //             Block<T> emptyBlock = new Bucket<>(blockingFactor, blockSize, recordClass);
-    //             writeBlock(i, emptyBlock);
-    //         }
-    //     }
-    // }
+        int currentBlocks = getTotalBlockCount();
+        if (blockCount > currentBlocks) {
+            for (int i = currentBlocks; i < blockCount; i++) {
+                Block<T> emptyBlock = new Bucket<>(blockingFactor, blockSize, recordClass);
+                writeBlock(i, emptyBlock);
+            }
+        }
+    }
 
     public int getBlockSize() {
         return blockSize;
