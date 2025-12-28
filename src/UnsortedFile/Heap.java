@@ -236,7 +236,6 @@ public class Heap<T extends StorableRecord> {
 
     public void writeBlock(int blockNumber, Block<T> block) {
         long position = (long) blockNumber * blockSize;
-
         binaryFile.seek(position);
         byte[] blockData = block.ToByteArray();
         binaryFile.write(blockData);
@@ -272,5 +271,4 @@ public class Heap<T extends StorableRecord> {
             binaryFile.close();
         }
     }
-
 }

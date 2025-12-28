@@ -2,7 +2,6 @@ package LinearHashing;
 
 import java.util.*;
 import java.util.concurrent.atomic.*;
-import java.util.function.*;
 import UnsortedFile.*;
 
 public class BucketHeap<T extends StorableRecord> {
@@ -23,7 +22,7 @@ public class BucketHeap<T extends StorableRecord> {
     }
 
     public BucketHeap(String mainBucketsPath, String mainMetadataPath,
-            String overflowBlocksPath, String overflowMetadataPath, Class<T> recordClass) throws IOException {
+            String overflowBlocksPath, String overflowMetadataPath, Class<T> recordClass) {
         this.recordClass = recordClass;
         UnsortedFile.BlockManager mainMetadata = new UnsortedFile.BlockManager(mainMetadataPath);
         UnsortedFile.BlockManager overflowMetadata = new UnsortedFile.BlockManager(overflowMetadataPath);
