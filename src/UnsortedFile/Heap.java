@@ -115,25 +115,12 @@ public class Heap<T extends StorableRecord> {
         if (block == null) {
             return null;
         }
-
-        int recordIndex = block.findRecordIndex(partialRecord);
-        if (recordIndex == -1) {
-            return null;
-        }
-
-        return block.getRecord(recordIndex);
+        return block.getRecord(partialRecord);
     }
 
     public boolean delete(int blockNumber, T partialRecord, Consumer<Block<T>> onSuccessDelete, Consumer<Block<T>> onUnsuccessDelete) {
             Block<T> block = readBlock(blockNumber);
-
-            int recordIndex = block.findRecordIndex(partialRecord);
-            if (recordIndex == -1) {
-                return false;
-            }
-
             boolean deleted = block.delete(partialRecord);
-
             if (deleted) {
                 int newValidCount = block.getValidBlockCount();
 
@@ -153,9 +140,7 @@ public class Heap<T extends StorableRecord> {
 
                 return true;
             }
-
             onUnsuccessDelete.accept(block);
-
             return false;
     }
 

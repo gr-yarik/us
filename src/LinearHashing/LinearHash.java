@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import LinearHashing.BucketHeap.BlockAndNumber;
 import UnsortedFile.StorableRecord;
 
 public class LinearHash<T extends StorableRecord> {
@@ -108,22 +109,13 @@ public class LinearHash<T extends StorableRecord> {
     private void performSplit() {
         Bucket<T> bucketToSplit = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(splitPointer);
         List<T> allRecords = new ArrayList<>();
-
-        bucketHeap.collectAllRecords(bucketToSplit, allRecords, (bucket, overflowBlocks) -> {
-
-            bucket.deleteAllRecords();
-
-            for (OverflowBlock<T> overflowBlock : overflowBlocks) {
-                overflowBlock.deleteAllRecords();
-                overflowBlock.setNextOverflowBlock(-1);
-            }
-        });
+        List<BlockAndNumber> overflowBlocks= new ArrayList<>();
+        bucketHeap.collectAllRecords(bucketToSplit, allRecords, overflowBlocks);
+        bucketHeap.clearOverflowChain(overflowBlocks);
+        bucketHeap.getMainBucketsHeap().writeBlock(splitPointer, bucketToSplit);
 
         int newBucketAddress = splitPointer + (M * (1 << level));
-        // bucketHeap.ensureBucketExists(newBucketAddress);
-
-        bucketHeap.clearOverflowChain(splitPointer);
-
+    
         for (T record : allRecords) {
             int recordKey = keyExtractor.apply(record);
             int newAddress = hashNext(recordKey);
@@ -168,14 +160,10 @@ public class LinearHash<T extends StorableRecord> {
         }
 
         Bucket<T> lastBucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(a);
-        if (lastBucket == null) {
-            return;
-        }
-
         List<T> recordsToMerge = new ArrayList<>();
-        bucketHeap.collectAllRecords(a, recordsToMerge);
-
-        bucketHeap.clearOverflowChain(a);
+        List<BlockAndNumber> overflowBlocks = new ArrayList<>();
+        bucketHeap.collectAllRecords(lastBucket, recordsToMerge, overflowBlocks);
+        bucketHeap.clearOverflowChain(overflowBlocks);
 
         for (T record : recordsToMerge) {
             bucketHeap.insertIntoBucket(b, record);

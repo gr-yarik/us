@@ -40,6 +40,13 @@ public class Bucket<T extends StorableRecord> extends Block<T> {
         return deleted;
     }
 
+    @Override
+    public int deleteAllRecords() {
+        int deletedCount = super.deleteAllRecords();
+        this.totalElementCount -= deletedCount;
+        return deletedCount;
+    }
+
     public int getFirstOverflowBlock() {
         return firstOverflowBlock;
     }
