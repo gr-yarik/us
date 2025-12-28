@@ -198,7 +198,7 @@ public class LinearHash<T extends StorableRecord> {
         debugInfoTotalOverflowBlocks = calculatedOverflowBlocks;
     }
 
-    public void close() throws IOException {
+    public void close() {
         if (bucketHeap != null) {
             bucketHeap.close();
         }

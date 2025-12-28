@@ -251,7 +251,6 @@ public class BucketHeap<T extends StorableRecord> {
             int minRequiredOverflowBlocks,
             List<BlockAndNumber> visitedOverflowBlocks
     ) {
-        
         int currentRecordIndex = 0;
         while (currentRecordIndex < allRecords.size() && !bucket.isFull()) {
             bucket.addRecord(allRecords.get(currentRecordIndex));
