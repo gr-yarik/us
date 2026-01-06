@@ -661,17 +661,11 @@ public class LinearHashDebugger extends JFrame {
                 person.birthdate = 0L;
             }
             
-            boolean success = linearHash.insert(person);
-            if (success) {
-                JOptionPane.showMessageDialog(this, 
-                    "Person added successfully.", 
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
-                refreshView();
-            } else {
-                JOptionPane.showMessageDialog(this, 
-                    "Failed to add person.", 
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            }
+            linearHash.insert(person);
+            JOptionPane.showMessageDialog(this, 
+                "Person added successfully.", 
+                "Success", JOptionPane.INFORMATION_MESSAGE);
+            refreshView();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, 
                 "Error adding person: " + e.getMessage(), 

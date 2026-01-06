@@ -175,12 +175,8 @@ public class LinearHashTester {
 
             for (int i = 0; i < TOTAL_PERSONS; i++) {
                 try {
-                    boolean success = linearHash.insert(persons[i]);
-                    if (success) {
-                        inserted++;
-                    } else {
-                        failed++;
-                    }
+                    linearHash.insert(persons[i]);
+                    inserted++;
                 } catch (Exception e) {
                     failed++;
                     if (failed <= 5) {
@@ -458,11 +454,9 @@ public class LinearHashTester {
                     person.birthdate = 20000101L;
 
                     try {
-                        boolean success = linearHash.insert(person);
-                        if (success) {
-                            insertedPersons.add(person);
-                            insertSuccess++;
-                        }
+                        linearHash.insert(person);
+                        insertedPersons.add(person);
+                        insertSuccess++;
                     } catch (Exception e) {
                         failures++;
                         if (failures <= 5) {

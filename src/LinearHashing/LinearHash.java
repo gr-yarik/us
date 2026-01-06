@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.function.Function;
 
 import LinearHashing.BucketHeap.BlockAndNumber;
+import LinearHashing.BucketHeap.OverflowBlockAndNumber;
 import UnsortedFile.StorableRecord;
 
 public class LinearHash<T extends StorableRecord> {
@@ -34,7 +35,7 @@ public class LinearHash<T extends StorableRecord> {
         this.debugInfoTotalOverflowBlocks = 0;
         this.totalPrimaryBuckets = M;
 
-        bucketHeap.getMainBucketsHeap().extendToBlockCount(M);
+        //bucketHeap.getMainBucketsHeap().extendToBlockCount(M);
         updateDebugInfo();
     }
 
@@ -57,26 +58,22 @@ public class LinearHash<T extends StorableRecord> {
         return address;
     }
 
-    public boolean insert(T record) {
+    public void insert(T record) {
         int key = keyExtractor.apply(record);
         int bucketAddress = calculateBucketAddress(key);
 
-        boolean inserted = bucketHeap.insertIntoBucket(bucketAddress, record);
-        if (inserted) {
-            updateDebugInfo();
+        bucketHeap.insertIntoBucket(bucketAddress, record);
+        updateDebugInfo();
 
-            double overflowRatio = calculateOverflowRatio();
-            if (overflowRatio > SPLIT_THRESHOLD) {
-                performSplit();
-            }
+        double overflowRatio = calculateOverflowRatio();
+        if (overflowRatio > SPLIT_THRESHOLD) {
+            performSplit();
         }
-        return inserted;
     }
 
     public T get(T partialRecord) {
         int key = keyExtractor.apply(partialRecord);
         int bucketAddress = calculateBucketAddress(key);
-
         return bucketHeap.get(bucketAddress, partialRecord);
     }
 
@@ -109,23 +106,27 @@ public class LinearHash<T extends StorableRecord> {
     private void performSplit() {
         Bucket<T> bucketToSplit = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(splitPointer);
         List<T> allRecords = new ArrayList<>();
-        List<BlockAndNumber> overflowBlocks= new ArrayList<>();
+        List<OverflowBlockAndNumber> overflowBlocks= new ArrayList<>();
         bucketHeap.collectAllRecords(bucketToSplit, allRecords, overflowBlocks);
         bucketHeap.clearOverflowChain(overflowBlocks);
         bucketHeap.getMainBucketsHeap().writeBlock(splitPointer, bucketToSplit);
 
         int newBucketAddress = splitPointer + (M * (1 << level));
     
+        List<T> recordsForOldBucket = new ArrayList<>();
+        List<T> recordsForNewBucket = new ArrayList<>();
         for (T record : allRecords) {
             int recordKey = keyExtractor.apply(record);
             int newAddress = hashNext(recordKey);
 
             if (newAddress == splitPointer) {
-                bucketHeap.insertIntoBucket(splitPointer, record);
+                recordsForOldBucket.add(record);
             } else {
-                bucketHeap.insertIntoBucket(newBucketAddress, record);
+                recordsForNewBucket.add(record);
             }
         }
+        bucketHeap.insertIntoBucket(splitPointer, recordsForOldBucket);
+        bucketHeap.insertIntoBucket(newBucketAddress, recordsForNewBucket);
 
         splitPointer++;
         if (splitPointer >= M * (1 << level)) {
@@ -161,20 +162,14 @@ public class LinearHash<T extends StorableRecord> {
 
         Bucket<T> lastBucket = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(a);
         List<T> recordsToMerge = new ArrayList<>();
-        List<BlockAndNumber> overflowBlocks = new ArrayList<>();
+        List<OverflowBlockAndNumber> overflowBlocks = new ArrayList<>();
         bucketHeap.collectAllRecords(lastBucket, recordsToMerge, overflowBlocks);
         bucketHeap.clearOverflowChain(overflowBlocks);
-
-        for (T record : recordsToMerge) {
-            bucketHeap.insertIntoBucket(b, record);
-        }
-
-        Class<T> recordClass = (Class<T>) recordsToMerge.get(0).getClass();
-        Bucket<T> emptyBucket = new Bucket<>(
-                bucketHeap.getMainBucketsHeap().getBlockingFactor(),
-                bucketHeap.getBlockSize(),
-                recordClass);
-        bucketHeap.getMainBucketsHeap().writeBlock(a, emptyBucket);
+        lastBucket.setFirstOverflowBlock(-1);
+        lastBucket.setOverflowBlockCount(0);
+    
+        bucketHeap.insertIntoBucket(b, recordsToMerge);
+        bucketHeap.getMainBucketsHeap().writeBlock(a, lastBucket);
 
         if (splitPointer > 0) {
             splitPointer = b; // S := b
