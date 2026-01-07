@@ -278,7 +278,7 @@ public class LinearHashTester {
                     linearHash.insert(extraPersons[i]);
                     insertedCount++;
                 } catch (Exception e) {
-                    // Count failures if any
+                    
                 }
             }
             expectedElementCount += insertedCount;

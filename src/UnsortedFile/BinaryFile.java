@@ -12,26 +12,33 @@ public class BinaryFile {
         
         try {
             this.file = new RandomAccessFile(f, "rw");
-        } catch (Exception e){}
+        } catch (Exception e){
+            throw new Error(e);
+        }
     }
     
     public void seek(long position) {
         try {
             file.seek(position);
-        } catch (Exception e){}
+        } catch (Exception e){
+            throw new Error(e);
+        }
     }
     
     public long getSize() {
         try {
             return file.length();
-        } catch (Exception e){}
-        throw new Error();
+        } catch (Exception e){
+            throw new Error(e);
+        }
     }
     
     public void write(byte[] data) {
         try {
             file.write(data);
-        } catch (Exception e){}
+        } catch (Exception e){
+            throw new Error(e);
+        }
     }
     
     public byte[] read(int length) {
@@ -39,14 +46,17 @@ public class BinaryFile {
             byte[] data = new byte[length];
             file.readFully(data);
             return data;
-        } catch (Exception e){}
-        throw new Error();
+        } catch (Exception e){
+            throw new RuntimeException("Failed to write to file", e);
+        }        
     }
     
     public void truncate(long length) {
         try {
             file.setLength(length);
-        } catch (Exception e){}
+        } catch (Exception e){
+            throw new Error(e);
+        }
     }
     
     public void close() {
@@ -54,6 +64,8 @@ public class BinaryFile {
             if (file != null) {
                 file.close();
             }
-        } catch (Exception e){}
+        } catch (Exception e){
+            throw new Error(e);
+        }
     }
 }
