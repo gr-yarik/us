@@ -78,7 +78,7 @@ public class BucketHeap<T extends StorableRecord> {
         }
 
         mainBucketsHeap.writeBlock(bucketNumber, bucket);
-        if (lastOverflowBlock != null) {
+        if (lastOverflowBlock != null && !overflowBlocks.contains(lastOverflowBlock)) {
             overflowHeap.writeBlock(lastOverflowBlock.number, lastOverflowBlock.block);
         }
         for (OverflowBlockAndNumber overflowBlockAndNumber : overflowBlocks) {
