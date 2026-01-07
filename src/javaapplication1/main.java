@@ -97,7 +97,7 @@ public class main {
 //        PersonInfo avlMinKey = new PersonInfo(null, 5_000.0);
 //        PersonInfo avlMaxKey = new PersonInfo(null, 20_000.0);
 //        
-//        java.util.List<BSTreeNodeData> avlRangeResults = avlTree.findInRange(avlMinKey, avlMaxKey);
+//        List<BSTreeNodeData> avlRangeResults = avlTree.findInRange(avlMinKey, avlMaxKey);
 //        System.out.println("People with savings between 5,000 and 20,000 (AVL Tree):");
 //        for (BSTreeNodeData data : avlRangeResults) {
 //            PersonInfo person = (PersonInfo) data;
