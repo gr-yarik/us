@@ -55,11 +55,7 @@ public class LinearHashTester {
 
             LinearHash<Person> linearHash = test3_InsertRecords(persons);
 
-            // Launch debugger UI (non-blocking)
-            if (linearHash != null) {
-                LinearHashDebugger.launch(linearHash);
-                System.out.println("Debugger UI launched. LinearHash will remain open while debugger is active.\n");
-            }
+           
 
             test4_VerifyAllRecords(linearHash, persons);
 
@@ -74,10 +70,15 @@ public class LinearHashTester {
             test9_RandomOperations(linearHash, persons);
 
             test10_VerifyTotalElementCount(linearHash);
+             // Launch debugger UI (non-blocking)
+             if (linearHash != null) {
+                LinearHashDebugger.launch(linearHash);
+                System.out.println("Debugger UI launched. LinearHash will remain open while debugger is active.\n");
+            }
 
             // Note: linearHash.close() is commented out to keep it open for the debugger
             // The debugger will keep the LinearHash instance alive
-            linearHash.close();
+            //linearHash.close();
 
             printSummary();
 

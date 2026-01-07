@@ -16,7 +16,8 @@ public class Heap<T extends StorableRecord> {
     private BlockManager blockManager;
     private boolean directBlockAddressingMode;
 
-    public Heap(String pathToFile, int blockSize, Class<T> recordClass, boolean directBlockAddressingMode, int reservedBytes) {
+    public Heap(String pathToFile, int blockSize, Class<T> recordClass, boolean directBlockAddressingMode,
+            int reservedBytes) {
         try {
             this.recordClass = recordClass;
             this.directBlockAddressingMode = directBlockAddressingMode;
@@ -66,7 +67,8 @@ public class Heap<T extends StorableRecord> {
 
                 this.blockManager = new BlockManager(metadataPath, blockSize);
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
         ;
     }
 
@@ -118,30 +120,35 @@ public class Heap<T extends StorableRecord> {
         return block.getRecord(partialRecord);
     }
 
-    public boolean delete(int blockNumber, T partialRecord, Consumer<Block<T>> onSuccessDelete, Consumer<Block<T>> onUnsuccessDelete) {
-            Block<T> block = readBlock(blockNumber);
-            boolean deleted = block.delete(partialRecord);
-            if (deleted) {
-                int newValidCount = block.getValidBlockCount();
+    public <B extends Block<T>> boolean delete(int blockNumber, T partialRecord, Class<B> blockClass,
+            Consumer<B> onSuccessDelete, Consumer<B> onUnsuccessDelete) {
+        B block = readBlock(blockNumber, blockClass);
+        boolean deleted = block.delete(partialRecord);
 
-                if (!directBlockAddressingMode) {
-                    blockManager.updateAfterDelete(blockNumber, newValidCount, blockingFactor, blockSize);
-                }
+        if (deleted) {
+            int newValidCount = block.getValidBlockCount();
 
-                if (onSuccessDelete != null) {
-                    onSuccessDelete.accept(block);
-                }
-
-                writeBlock(blockNumber, block);
-
-                if (block.isEmpty() && !directBlockAddressingMode) {
-                    truncateAtTheEndIfPossible();
-                } 
-
-                return true;
+            if (!directBlockAddressingMode) {
+                blockManager.updateAfterDelete(blockNumber, newValidCount, blockingFactor, blockSize);
             }
+
+            if (onSuccessDelete != null) {
+                onSuccessDelete.accept(block);
+            }
+
+            writeBlock(blockNumber, block);
+
+            if (block.isEmpty() && !directBlockAddressingMode) {
+                truncateAtTheEndIfPossible();
+            }
+
+            return true;
+        }
+
+        if (onUnsuccessDelete != null) {
             onUnsuccessDelete.accept(block);
-            return false;
+        }
+        return false;
     }
 
     public int getTotalBlockCount() {
@@ -242,7 +249,7 @@ public class Heap<T extends StorableRecord> {
     }
 
     public void extendFile(int toBlockNumber) {
-        
+
     }
 
     public void extendToBlockCount(int blockCount) {
@@ -256,6 +263,18 @@ public class Heap<T extends StorableRecord> {
                 Block<T> emptyBlock = new Bucket<>(blockingFactor, blockSize, recordClass);
                 writeBlock(i, emptyBlock);
             }
+        }
+    }
+
+    public void truncateToBlockCount(int blockCount) {
+        if (!directBlockAddressingMode) {
+            throw new Error("Cannot be used in classic heap");
+        }
+
+        int currentBlocks = getTotalBlockCount();
+        if (blockCount < currentBlocks) {
+            long newFileSize = (long) blockCount * blockSize;
+            binaryFile.truncate(newFileSize);
         }
     }
 

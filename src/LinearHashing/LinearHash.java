@@ -140,6 +140,7 @@ public class LinearHash<T extends StorableRecord> {
         }
 
         totalPrimaryBuckets++;
+        bucketHeap.getMainBucketsHeap().extendToBlockCount(totalPrimaryBuckets);
         updateDebugInfo();
     }
 
@@ -182,6 +183,7 @@ public class LinearHash<T extends StorableRecord> {
         }
 
         totalPrimaryBuckets--;
+        bucketHeap.getMainBucketsHeap().truncateToBlockCount(totalPrimaryBuckets);
         updateDebugInfo();
     }
 

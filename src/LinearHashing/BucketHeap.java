@@ -165,24 +165,20 @@ public class BucketHeap<T extends StorableRecord> {
 
         Boolean[] deletionResult = { Boolean.FALSE };
 
-        deletionResult[0] = mainBucketsHeap.delete(bucketNumber, partialRecord,
+        deletionResult[0] = mainBucketsHeap.delete(bucketNumber, partialRecord, Bucket.class,
 
-                // record was found in the main bucket and deleted
-                (Block<T> block) -> {
-                    Bucket<T> bucket = (Bucket<T>) block;
-
+                (bucket) -> {
                     int minRequiredOverflowBlocks = minimalRequiredOverflowBlockNumber(bucket.getTotalRecordCount(),
                             true);
 
                     if (minRequiredOverflowBlocks < bucket.getTotalOverflowBlockCount()
                             && bucket.getFirstOverflowBlock() != -1) {
                         List<OverflowBlockAndNumber> overflowBlocks = new ArrayList<OverflowBlockAndNumber>();
-                        shuffle(bucket, minRequiredOverflowBlocks, overflowBlocks);
+                        shuffle((Bucket<T>) bucket, minRequiredOverflowBlocks, overflowBlocks);
                     }
                 },
-                // record was not found in the main bucket. Trying to delete in overflow
-                (Block<T> block) -> {
-                    BlockAndNumber bucketAndNumber = new BlockAndNumber(block, bucketNumber);
+                (bucket) -> {
+                    BlockAndNumber bucketAndNumber = new BlockAndNumber(bucket, bucketNumber);
                     deletionResult[0] = deleteFromOverflowChain(bucketAndNumber, partialRecord);
                 });
 
@@ -204,10 +200,9 @@ public class BucketHeap<T extends StorableRecord> {
         while (nextOverflowBlockNumber.get() != -1) {
             final int currentBlockNum = nextOverflowBlockNumber.get();
 
-            boolean deleted = overflowHeap.delete(currentBlockNum, partialRecord,
+            boolean deleted = overflowHeap.delete(currentBlockNum, partialRecord, OverflowBlock.class,
 
-                    // Record was found in the current overflow block and was deleted
-                    (Block<T> block) -> {
+                    (block) -> {
                         deletionOccurred.set(true);
                         visitedOverflowBlocks
                                 .add(new OverflowBlockAndNumber((OverflowBlock<T>) block, currentBlockNum));
@@ -217,11 +212,10 @@ public class BucketHeap<T extends StorableRecord> {
                             bucket.decrementOverflowBlockCountBy(1);
 
                             if (previousOverflowBlock.get() == null) {
-                                // This was the first overflow block
                                 bucket.setFirstOverflowBlock(-1);
                             } else {
-                                // Unlink this empty block from the chain
                                 previousOverflowBlock.get().setNextOverflowBlock(-1);
+                                // Ensure () on accessors
                                 overflowHeap.writeBlock(previousOverflowBlockNumber.get(), previousOverflowBlock.get());
                             }
                         }
@@ -235,12 +229,11 @@ public class BucketHeap<T extends StorableRecord> {
                         mainBucketsHeap.writeBlock(bucketNumber, bucket);
                     },
 
-                    // Record was not found in the current overflow block
-                    (Block<T> block) -> {
-                        OverflowBlock<T> overflowBlock = (OverflowBlock<T>) block;
-                        visitedOverflowBlocks.add(new OverflowBlockAndNumber(overflowBlock, currentBlockNum));
+                    (overflowBlock) -> {
 
-                        previousOverflowBlock.set(overflowBlock);
+                        visitedOverflowBlocks.add(new OverflowBlockAndNumber((OverflowBlock<T>) overflowBlock, currentBlockNum));
+
+                        previousOverflowBlock.set((OverflowBlock<T>) overflowBlock);
                         previousOverflowBlockNumber.set(currentBlockNum);
                         nextOverflowBlockNumber.set(overflowBlock.getNextOverflowBlock());
                     });
@@ -259,7 +252,7 @@ public class BucketHeap<T extends StorableRecord> {
         List<OverflowBlockAndNumber> freedOverflowBlocks = insertCompactly(bucket, allRecords, overflowBlocks);
         if (bucket.getTotalOverflowBlockCount() > 0 && !overflowBlocks.isEmpty()) {
             bucket.setFirstOverflowBlock(overflowBlocks.get(0).number);
-        } 
+        }
         clearOverflowChain(freedOverflowBlocks);
         overflowHeap.truncateAtTheEndIfPossible();
         if (bucket.getTotalRecordCount() != allRecords.size() ||
@@ -371,8 +364,8 @@ public class BucketHeap<T extends StorableRecord> {
             overflowBlockNumber = overflowBlock.getNextOverflowBlock();
         }
 
-        if (bucket.getTotalRecordCount() != 0 
-        || bucket.getTotalOverflowBlockCount() != 0) {
+        if (bucket.getTotalRecordCount() != 0
+                || bucket.getTotalOverflowBlockCount() != 0) {
             throw new Error("An error occurred during collecting all records in the chain");
         }
 
