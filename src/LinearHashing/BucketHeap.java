@@ -29,7 +29,6 @@ public class BucketHeap<T extends StorableRecord> {
         OverflowBlockAndNumber lastOverflowBlock = null;
 
         {
-            OverflowBlock<T> overflowBlock = null;
             int overflowBlockNumber;
             overflowBlockNumber = bucket.getFirstOverflowBlock();
             int neededSpaces = records.size();
@@ -37,7 +36,8 @@ public class BucketHeap<T extends StorableRecord> {
             neededSpaces -= (mainBucketsHeap.getBlockingFactor() - bucket.getValidBlockCount());
 
             while (overflowBlockNumber != -1 && neededSpaces > 0) {
-                overflowBlock = overflowHeap.readBlock(overflowBlockNumber, OverflowBlock.class);
+                OverflowBlock<T> overflowBlock = overflowHeap.readBlock(overflowBlockNumber, OverflowBlock.class);
+                lastOverflowBlock = new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber);
                 if (!overflowBlock.isFull()) {
                     overflowBlocks.add(new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber));
                     neededSpaces -= (overflowHeap.getBlockingFactor() - overflowBlock.getValidBlockCount());
@@ -47,9 +47,6 @@ public class BucketHeap<T extends StorableRecord> {
 
             if (neededSpaces > 0) {
                 int requiredOverflowBlocks = minimalRequiredOverflowBlockNumber(neededSpaces, false);
-                if(overflowBlock != null) {
-                    lastOverflowBlock = new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber);
-                }
                 appendNewOverflowBlocks(requiredOverflowBlocks, bucket, overflowBlocks, lastOverflowBlock);
             }
         }
@@ -76,9 +73,6 @@ public class BucketHeap<T extends StorableRecord> {
                     currentRecordIndex++;
                 }
 
-                if (currentRecordIndex == records.size()) {
-                    overflowBlock.setNextOverflowBlock(-1);
-                }
                 currentOverflowBlockIndex++;
             }
         }

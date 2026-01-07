@@ -19,7 +19,7 @@ public class LinearHashTester {
     private static final String OVERFLOW_METADATA_FILE = "linearhash_overflow.meta";
     private static final int BLOCK_SIZE = 250; // 512;
     private static final int OVERFLOW_BLOCK_SIZE = 200; //256;
-    private static final int TOTAL_PERSONS = 2;
+    private static final int TOTAL_PERSONS = 20;
 
     private static int testsPassed = 0;
     private static int testsFailed = 0;
@@ -60,23 +60,23 @@ public class LinearHashTester {
                 System.out.println("Debugger UI launched. LinearHash will remain open while debugger is active.\n");
             }
 
-            // test4_VerifyAllRecords(linearHash, persons);
+            test4_VerifyAllRecords(linearHash, persons);
 
-            // test5_TestOverflowHandling(linearHash);
+            test5_TestOverflowHandling(linearHash);
 
-            // test6_TestSplitOperation(linearHash);
+            test6_TestSplitOperation(linearHash);
 
-            // test7_DeleteRecords(linearHash, persons);
+            test7_DeleteRecords(linearHash, persons);
 
-            // test8_TestMergeOperation(linearHash);
+            test8_TestMergeOperation(linearHash);
 
-            // test9_RandomOperations(linearHash, persons);
+            test9_RandomOperations(linearHash, persons);
 
             // Note: linearHash.close() is commented out to keep it open for the debugger
             // The debugger will keep the LinearHash instance alive
-            // linearHash.close();
+            linearHash.close();
 
-            // printSummary();
+            printSummary();
 
         } catch (Exception e) {
             System.err.println("\n✗ FATAL ERROR: " + e.getMessage());
