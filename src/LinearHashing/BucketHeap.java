@@ -47,7 +47,9 @@ public class BucketHeap<T extends StorableRecord> {
 
             if (neededSpaces > 0) {
                 int requiredOverflowBlocks = minimalRequiredOverflowBlockNumber(neededSpaces, false);
-                lastOverflowBlock = new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber);
+                if(overflowBlock != null) {
+                    lastOverflowBlock = new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber);
+                }
                 appendNewOverflowBlocks(requiredOverflowBlocks, bucket, overflowBlocks, lastOverflowBlock);
             }
         }
@@ -103,7 +105,7 @@ public class BucketHeap<T extends StorableRecord> {
             }
 
             if (i == 0) {
-                if (lastOverflowBlock.block == null) {
+                if (lastOverflowBlock == null) {
                     bucket.setFirstOverflowBlock(overflowBlockNumber);
                 } else {
                     lastOverflowBlock.block.setNextOverflowBlock(overflowBlockNumber);

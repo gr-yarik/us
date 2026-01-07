@@ -423,7 +423,7 @@ public class LinearHashDebugger extends JFrame {
                 info.validCount, info.capacity, 
                 (info.capacity > 0 ? (100.0 * info.validCount / info.capacity) : 0));
             
-            String firstOverflow = info.firstOverflowBlock == -1 ? "None" : String.valueOf(info.firstOverflowBlock);
+            String firstOverflow = String.valueOf(info.firstOverflowBlock);
             
             mainBucketsTableModel.addRow(new Object[]{
                 info.blockNumber,
@@ -446,7 +446,7 @@ public class LinearHashDebugger extends JFrame {
                 info.validCount, info.capacity, 
                 (info.capacity > 0 ? (100.0 * info.validCount / info.capacity) : 0));
             
-            String nextOverflow = info.nextOverflowBlock == -1 ? "None" : String.valueOf(info.nextOverflowBlock);
+            String nextOverflow = String.valueOf(info.nextOverflowBlock);
             
             overflowBlocksTableModel.addRow(new Object[]{
                 info.blockNumber,
@@ -553,7 +553,7 @@ public class LinearHashDebugger extends JFrame {
             (info.capacity > 0 ? (100.0 * info.validCount / info.capacity) : 0))).append("\n");
         sb.append("Overflow Bucket Count: ").append(info.overflowBucketCount).append("\n");
         sb.append("Total Element Count:   ").append(info.totalElementCount).append("\n");
-        sb.append("First Overflow Block:  ").append(info.firstOverflowBlock == -1 ? "None" : String.valueOf(info.firstOverflowBlock)).append("\n");
+        sb.append("First Overflow Block:  ").append(String.valueOf(info.firstOverflowBlock)).append("\n");
         sb.append(repeatString("-", 80)).append("\n");
         sb.append("ALL RECORD SLOTS (showing all ").append(info.capacity).append(" slots):\n");
         sb.append(repeatString("-", 80)).append("\n\n");
@@ -595,7 +595,7 @@ public class LinearHashDebugger extends JFrame {
         sb.append("Valid Records:         ").append(info.validCount).append(" / ").append(info.capacity).append("\n");
         sb.append("Usage:                 ").append(String.format("%.1f%%", 
             (info.capacity > 0 ? (100.0 * info.validCount / info.capacity) : 0))).append("\n");
-        sb.append("Next Overflow Block: ").append(info.nextOverflowBlock == -1 ? "None" : String.valueOf(info.nextOverflowBlock)).append("\n");
+        sb.append("Next Overflow Block: ").append(String.valueOf(info.nextOverflowBlock)).append("\n");
         sb.append(repeatString("-", 80)).append("\n");
         sb.append("ALL RECORD SLOTS (showing all ").append(info.capacity).append(" slots):\n");
         sb.append(repeatString("-", 80)).append("\n\n");

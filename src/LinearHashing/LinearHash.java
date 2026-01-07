@@ -35,7 +35,7 @@ public class LinearHash<T extends StorableRecord> {
         this.debugInfoTotalOverflowBlocks = 0;
         this.totalPrimaryBuckets = M;
 
-        //bucketHeap.getMainBucketsHeap().extendToBlockCount(M);
+        bucketHeap.getMainBucketsHeap().extendToBlockCount(M);
         updateDebugInfo();
     }
 
@@ -106,9 +106,11 @@ public class LinearHash<T extends StorableRecord> {
     private void performSplit() {
         Bucket<T> bucketToSplit = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(splitPointer);
         List<T> allRecords = new ArrayList<>();
-        List<OverflowBlockAndNumber> overflowBlocks= new ArrayList<>();
-        bucketHeap.collectAllRecords(bucketToSplit, allRecords, overflowBlocks);
-        bucketHeap.clearOverflowChain(overflowBlocks);
+        {
+            List<OverflowBlockAndNumber> overflowBlocks= new ArrayList<>();
+            bucketHeap.collectAllRecords(bucketToSplit, allRecords, overflowBlocks);
+            bucketHeap.clearOverflowChain(overflowBlocks);
+        }
         bucketHeap.getMainBucketsHeap().writeBlock(splitPointer, bucketToSplit);
 
         int newBucketAddress = splitPointer + (M * (1 << level));
