@@ -203,40 +203,42 @@ public class BucketHeap<T extends StorableRecord> {
             boolean deleted = overflowHeap.delete(currentBlockNum, partialRecord, OverflowBlock.class,
 
                     (block) -> {
+                        // Inside deleteFromOverflowChain, within the onSuccessDelete callback:
                         deletionOccurred.set(true);
                         visitedOverflowBlocks
                                 .add(new OverflowBlockAndNumber((OverflowBlock<T>) block, currentBlockNum));
 
                         bucket.decrementTotalElementCountBy(1);
-                        boolean overflowCountDecremented = false;
-                       
+
+                        // Identify if a shuffle is needed BEFORE modifying the overflow chain
+                        int minRequiredOverflowBlocks = minimalRequiredOverflowBlockNumber(bucket.getTotalRecordCount(),
+                                true);
+                        boolean needsShuffle = minRequiredOverflowBlocks < bucket.getTotalOverflowBlockCount()
+                                && bucket.getFirstOverflowBlock() != -1;
+
                         if (block.isEmpty()) {
-                            bucket.decrementOverflowBlockCountBy(1);
-                            overflowCountDecremented = true;
-                        
-                           
+                            // Only update pointers if we aren't about to wipe the whole chain via shuffle
                             int nextBlockNum = block.getNextOverflowBlock();
-                        
                             if (previousOverflowBlock.get() == null) {
-                                
                                 bucket.setFirstOverflowBlock(nextBlockNum);
                             } else {
-                             
                                 previousOverflowBlock.get().setNextOverflowBlock(nextBlockNum);
                                 overflowHeap.writeBlock(previousOverflowBlockNumber.get(), previousOverflowBlock.get());
                             }
+
+                            // Fix: Only decrement manually if shuffle is NOT going to happen.
+                            // Otherwise, collectAllRecords (inside shuffle) will handle resetting the
+                            // count.
+                            if (!needsShuffle) {
+                                bucket.decrementOverflowBlockCountBy(1);
+                            }
                         }
 
-                        int minRequiredOverflowBlocks = minimalRequiredOverflowBlockNumber(
-                                bucket.getTotalRecordCount(), true);
-                        if (minRequiredOverflowBlocks < bucket.getTotalOverflowBlockCount()
-                                && bucket.getFirstOverflowBlock() != -1) {
-                            if (overflowCountDecremented) {
-                                bucket.incrementOverflowBlockCountBy(1);
-                            }
+                        if (needsShuffle) {
                             shuffle(bucket, minRequiredOverflowBlocks, visitedOverflowBlocks);
                         }
                         mainBucketsHeap.writeBlock(bucketNumber, bucket);
+
                     },
 
                     (overflowBlock) -> {
@@ -273,11 +275,12 @@ public class BucketHeap<T extends StorableRecord> {
     }
 
     private int minimalRequiredOverflowBlockNumber(int totalElements, boolean includingBucket) {
-        if (includingBucket)
-            return Math.abs((int) Math.ceil(
-                    (double) (totalElements - mainBucketsHeap.getBlockingFactor()) / overflowHeap.getBlockingFactor()));
-        else
+        if (includingBucket) {
+            int overflowRecords = Math.max(0, totalElements - mainBucketsHeap.getBlockingFactor());
+            return (int) Math.ceil((double) overflowRecords / overflowHeap.getBlockingFactor());
+        } else {
             return (int) Math.ceil((double) totalElements / overflowHeap.getBlockingFactor());
+        }
     }
 
     private List<OverflowBlockAndNumber> insertCompactly(
@@ -306,7 +309,9 @@ public class BucketHeap<T extends StorableRecord> {
                 currentRecordIndex++;
             }
 
-            if (currentRecordIndex == allRecords.size()) {
+            if (currentRecordIndex < allRecords.size() && (currentOverflowBlockIndex + 1) < overflowBlocks.size()) {
+                overflowBlock.setNextOverflowBlock(overflowBlocks.get(currentOverflowBlockIndex + 1).number);
+            } else {
                 overflowBlock.setNextOverflowBlock(-1);
             }
 
