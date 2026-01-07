@@ -108,7 +108,7 @@ public class LinearHash<T extends StorableRecord> {
         List<T> allRecords = new ArrayList<>();
         {
             List<OverflowBlockAndNumber> overflowBlocks= new ArrayList<>();
-            bucketHeap.collectAllRecords(bucketToSplit, allRecords, overflowBlocks, true);
+            bucketHeap.collectAllRecords(bucketToSplit, allRecords, overflowBlocks);
             bucketHeap.clearOverflowChain(overflowBlocks);
         }
 
@@ -170,9 +170,7 @@ public class LinearHash<T extends StorableRecord> {
         List<OverflowBlockAndNumber> overflowBlocks = new ArrayList<>();
         bucketHeap.collectAllRecords(lastBucket, recordsToMerge, overflowBlocks);
         bucketHeap.clearOverflowChain(overflowBlocks);
-        lastBucket.setFirstOverflowBlock(-1);
-        lastBucket.setOverflowBlockCount(0);
-    
+        
         bucketHeap.insertIntoBucket(b, recordsToMerge);
         bucketHeap.getMainBucketsHeap().writeBlock(a, lastBucket);
 

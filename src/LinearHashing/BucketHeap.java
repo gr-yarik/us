@@ -255,8 +255,11 @@ public class BucketHeap<T extends StorableRecord> {
 
     private void shuffle(Bucket<T> bucket, int minRequiredOverflowBlocks, List<OverflowBlockAndNumber> overflowBlocks) {
         List<T> allRecords = new ArrayList<T>();
-        collectAllRecords(bucket, allRecords, overflowBlocks, false);
+        collectAllRecords(bucket, allRecords, overflowBlocks);
         List<OverflowBlockAndNumber> freedOverflowBlocks = insertCompactly(bucket, allRecords, overflowBlocks);
+        if (bucket.getTotalOverflowBlockCount() > 0 && !overflowBlocks.isEmpty()) {
+            bucket.setFirstOverflowBlock(overflowBlocks.get(0).number);
+        } 
         clearOverflowChain(freedOverflowBlocks);
         overflowHeap.truncateAtTheEndIfPossible();
         if (bucket.getTotalRecordCount() != allRecords.size() ||
@@ -340,14 +343,14 @@ public class BucketHeap<T extends StorableRecord> {
     }
 
     public void collectAllRecords(Bucket<T> bucket, List<T> records,
-            List<OverflowBlockAndNumber> visitedOverflowBlocks, boolean shouldUnlinkBucket) {
+            List<OverflowBlockAndNumber> visitedOverflowBlocks) {
         records.addAll(bucket.getAllValidRecords());
         bucket.deleteAllRecords();
 
         for (OverflowBlockAndNumber overflowBlock : visitedOverflowBlocks) {
             records.addAll(overflowBlock.block.getAllValidRecords());
             bucket.decrementTotalElementCountBy(overflowBlock.block.deleteAllRecords());
-            if(shouldUnlinkBucket) bucket.decrementOverflowBlockCountBy(1);
+            bucket.decrementOverflowBlockCountBy(1);
         }
 
         int overflowBlockNumber;
@@ -364,7 +367,7 @@ public class BucketHeap<T extends StorableRecord> {
             visitedOverflowBlocks.add(new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber));
 
             bucket.decrementTotalElementCountBy(overflowBlock.deleteAllRecords());
-            if(shouldUnlinkBucket) bucket.decrementOverflowBlockCountBy(1);
+            bucket.decrementOverflowBlockCountBy(1);
             overflowBlockNumber = overflowBlock.getNextOverflowBlock();
         }
 
@@ -373,7 +376,7 @@ public class BucketHeap<T extends StorableRecord> {
             throw new Error("An error occurred during collecting all records in the chain");
         }
 
-        if(shouldUnlinkBucket) bucket.setFirstOverflowBlock(-1);
+        bucket.setFirstOverflowBlock(-1);
     }
 
     public int getBlockSize() {
