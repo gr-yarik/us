@@ -126,22 +126,22 @@ public class Heap<T extends StorableRecord> {
         boolean deleted = block.delete(partialRecord);
 
         if (deleted) {
-            int newValidCount = block.getValidBlockCount();
-
-            if (!directBlockAddressingMode) {
-                blockManager.updateAfterDelete(blockNumber, newValidCount, blockingFactor, blockSize);
-            }
-
             if (onSuccessDelete != null) {
                 onSuccessDelete.accept(block);
             }
-
+        
+            int newValidCount = block.getValidBlockCount();
+        
+            if (!directBlockAddressingMode) {
+                blockManager.updateAfterDelete(blockNumber, newValidCount, blockingFactor, blockSize);
+            }
+        
             writeBlock(blockNumber, block);
-
+        
             if (block.isEmpty() && !directBlockAddressingMode) {
                 truncateAtTheEndIfPossible();
             }
-
+        
             return true;
         }
 

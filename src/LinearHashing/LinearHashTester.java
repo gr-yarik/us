@@ -145,6 +145,7 @@ public class LinearHashTester {
                 "Clark", "Ramirez", "Lewis", "Robinson", "Walker", "Young"
         };
 
+        int f = 2;
         for (int i = 0; i < TOTAL_PERSONS; i++) {
             Person person = new Person();
             person.name = firstNames[i % firstNames.length];
@@ -153,8 +154,9 @@ public class LinearHashTester {
             int month = 1 + (i % 12);
             int day = 1 + (i % 28);
             person.birthdate = Long.parseLong(String.format("%04d%02d%02d", year, month, day));
-            person.id = "ID" + String.format("%08d", 10000000 + i);
+            person.id = "ID" + String.format("%08d", 10000000 + i + f);
             persons[i] = person;
+            f+=3;
         }
 
         pass("Test 2 passed: Generated " + TOTAL_PERSONS + " Person objects");

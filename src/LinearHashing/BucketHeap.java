@@ -209,14 +209,20 @@ public class BucketHeap<T extends StorableRecord> {
 
                         bucket.decrementTotalElementCountBy(1);
                         boolean overflowCountDecremented = false;
+                       
                         if (block.isEmpty()) {
                             bucket.decrementOverflowBlockCountBy(1);
                             overflowCountDecremented = true;
-
+                        
+                           
+                            int nextBlockNum = block.getNextOverflowBlock();
+                        
                             if (previousOverflowBlock.get() == null) {
-                                bucket.setFirstOverflowBlock(-1);
+                                
+                                bucket.setFirstOverflowBlock(nextBlockNum);
                             } else {
-                                previousOverflowBlock.get().setNextOverflowBlock(-1);
+                             
+                                previousOverflowBlock.get().setNextOverflowBlock(nextBlockNum);
                                 overflowHeap.writeBlock(previousOverflowBlockNumber.get(), previousOverflowBlock.get());
                             }
                         }
