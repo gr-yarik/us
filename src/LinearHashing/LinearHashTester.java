@@ -368,22 +368,23 @@ public class LinearHashTester {
         int deleted = 0;
         int failed = 0;
 
+        int numberOfDeletions = 1000;
         try {
-            for (int i = 0; i < 100 && i < TOTAL_PERSONS; i++) {
+            for (int i = 0; i < numberOfDeletions && i < TOTAL_PERSONS; i++) {
                 Person personToDelete = persons[i];
                 boolean success = linearHash.delete(personToDelete);
                 if (success) {
                     deleted++;
                 } else {
                     failed++;
-                    if (failed <= 5) {
+                    
                         fail("Test 7: Failed to delete person " + personToDelete.id);
-                    }
+                    
                 }
             }
 
             int stillFound = 0;
-            for (int i = 0; i < 100 && i < TOTAL_PERSONS; i++) {
+            for (int i = 0; i < numberOfDeletions && i < TOTAL_PERSONS; i++) {
                 Person deletedPerson = persons[i];
                 Person found = linearHash.get(deletedPerson);
                 if (found != null) {
@@ -450,7 +451,7 @@ public class LinearHashTester {
     private static void test9_RandomOperations(LinearHash<Person> linearHash, Person[] persons) {
         System.out.println("Test 9: Running random operations (insert, get, delete)");
         Random random = new Random(42);
-        int operations = 500;
+        int operations = 1500;
         int insertOps = 0;
         int deleteOps = 0;
         int getOps = 0;
@@ -496,9 +497,9 @@ public class LinearHashTester {
                             }
                         } catch (Exception e) {
                             failures++;
-                            if (failures <= 5) {
+                        
                                 fail("Test 9: Delete failed: " + e.getMessage());
-                            }
+                            
                         }
                     }
                 } else {
@@ -512,15 +513,15 @@ public class LinearHashTester {
                                 getSuccess++;
                             } else {
                                 failures++;
-                                if (failures <= 5) {
+                                
                                     fail("Test 9: Get failed for person " + personToGet.id);
-                                }
+                                
                             }
                         } catch (Exception e) {
                             failures++;
-                            if (failures <= 5) {
+                           
                                 fail("Test 9: Get failed: " + e.getMessage());
-                            }
+                            
                         }
                     }
                 }

@@ -208,14 +208,15 @@ public class BucketHeap<T extends StorableRecord> {
                                 .add(new OverflowBlockAndNumber((OverflowBlock<T>) block, currentBlockNum));
 
                         bucket.decrementTotalElementCountBy(1);
+                        boolean overflowCountDecremented = false;
                         if (block.isEmpty()) {
                             bucket.decrementOverflowBlockCountBy(1);
+                            overflowCountDecremented = true;
 
                             if (previousOverflowBlock.get() == null) {
                                 bucket.setFirstOverflowBlock(-1);
                             } else {
                                 previousOverflowBlock.get().setNextOverflowBlock(-1);
-                                // Ensure () on accessors
                                 overflowHeap.writeBlock(previousOverflowBlockNumber.get(), previousOverflowBlock.get());
                             }
                         }
@@ -224,6 +225,9 @@ public class BucketHeap<T extends StorableRecord> {
                                 bucket.getTotalRecordCount(), true);
                         if (minRequiredOverflowBlocks < bucket.getTotalOverflowBlockCount()
                                 && bucket.getFirstOverflowBlock() != -1) {
+                            if (overflowCountDecremented) {
+                                bucket.incrementOverflowBlockCountBy(1);
+                            }
                             shuffle(bucket, minRequiredOverflowBlocks, visitedOverflowBlocks);
                         }
                         mainBucketsHeap.writeBlock(bucketNumber, bucket);
@@ -231,7 +235,8 @@ public class BucketHeap<T extends StorableRecord> {
 
                     (overflowBlock) -> {
 
-                        visitedOverflowBlocks.add(new OverflowBlockAndNumber((OverflowBlock<T>) overflowBlock, currentBlockNum));
+                        visitedOverflowBlocks
+                                .add(new OverflowBlockAndNumber((OverflowBlock<T>) overflowBlock, currentBlockNum));
 
                         previousOverflowBlock.set((OverflowBlock<T>) overflowBlock);
                         previousOverflowBlockNumber.set(currentBlockNum);
