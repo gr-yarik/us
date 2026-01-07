@@ -108,9 +108,12 @@ public class LinearHash<T extends StorableRecord> {
         List<T> allRecords = new ArrayList<>();
         {
             List<OverflowBlockAndNumber> overflowBlocks= new ArrayList<>();
-            bucketHeap.collectAllRecords(bucketToSplit, allRecords, overflowBlocks);
+            bucketHeap.collectAllRecords(bucketToSplit, allRecords, overflowBlocks, true);
             bucketHeap.clearOverflowChain(overflowBlocks);
         }
+
+        //bucketToSplit.setFirstOverflowBlock(-1);
+    //   bucketToSplit.setOverflowBlockCount(0);
         bucketHeap.getMainBucketsHeap().writeBlock(splitPointer, bucketToSplit);
 
         int newBucketAddress = splitPointer + (M * (1 << level));

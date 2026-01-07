@@ -255,7 +255,7 @@ public class BucketHeap<T extends StorableRecord> {
 
     private void shuffle(Bucket<T> bucket, int minRequiredOverflowBlocks, List<OverflowBlockAndNumber> overflowBlocks) {
         List<T> allRecords = new ArrayList<T>();
-        collectAllRecords(bucket, allRecords, overflowBlocks);
+        collectAllRecords(bucket, allRecords, overflowBlocks, false);
         List<OverflowBlockAndNumber> freedOverflowBlocks = insertCompactly(bucket, allRecords, overflowBlocks);
         clearOverflowChain(freedOverflowBlocks);
         overflowHeap.truncateAtTheEndIfPossible();
@@ -340,13 +340,14 @@ public class BucketHeap<T extends StorableRecord> {
     }
 
     public void collectAllRecords(Bucket<T> bucket, List<T> records,
-            List<OverflowBlockAndNumber> visitedOverflowBlocks) {
+            List<OverflowBlockAndNumber> visitedOverflowBlocks, boolean shouldUnlinkBucket) {
         records.addAll(bucket.getAllValidRecords());
         bucket.deleteAllRecords();
 
         for (OverflowBlockAndNumber overflowBlock : visitedOverflowBlocks) {
             records.addAll(overflowBlock.block.getAllValidRecords());
             bucket.decrementTotalElementCountBy(overflowBlock.block.deleteAllRecords());
+            if(shouldUnlinkBucket) bucket.decrementOverflowBlockCountBy(1);
         }
 
         int overflowBlockNumber;
@@ -363,12 +364,16 @@ public class BucketHeap<T extends StorableRecord> {
             visitedOverflowBlocks.add(new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber));
 
             bucket.decrementTotalElementCountBy(overflowBlock.deleteAllRecords());
+            if(shouldUnlinkBucket) bucket.decrementOverflowBlockCountBy(1);
             overflowBlockNumber = overflowBlock.getNextOverflowBlock();
         }
 
-        if (bucket.getTotalRecordCount() != 0) {
+        if (bucket.getTotalRecordCount() != 0 
+        || bucket.getTotalOverflowBlockCount() != 0) {
             throw new Error("An error occurred during collecting all records in the chain");
         }
+
+        if(shouldUnlinkBucket) bucket.setFirstOverflowBlock(-1);
     }
 
     public int getBlockSize() {

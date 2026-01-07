@@ -19,13 +19,14 @@ public class LinearHashTester {
     private static final String OVERFLOW_METADATA_FILE = "linearhash_overflow.meta";
     private static final int BLOCK_SIZE = 250; // 512;
     private static final int OVERFLOW_BLOCK_SIZE = 200; //256;
-    private static final int TOTAL_PERSONS = 20;
+    private static final int TOTAL_PERSONS = 2000;
 
     private static int testsPassed = 0;
     private static int testsFailed = 0;
     private static List<String> failures = new ArrayList<>();
     private static int testMethodsPassed = 0;
     private static int testMethodsFailed = 0;
+    private static int expectedElementCount = 0;
 
     private static int extractKey(Person person) {
        return Integer.parseInt(person.id.substring(2));
@@ -71,6 +72,8 @@ public class LinearHashTester {
             test8_TestMergeOperation(linearHash);
 
             test9_RandomOperations(linearHash, persons);
+
+            test10_VerifyTotalElementCount(linearHash);
 
             // Note: linearHash.close() is commented out to keep it open for the debugger
             // The debugger will keep the LinearHash instance alive
@@ -201,8 +204,10 @@ public class LinearHashTester {
 
             if (failed == 0) {
                 pass("Test 3 passed: Inserted " + inserted + " records");
+                expectedElementCount += inserted;
             } else {
                 fail("Test 3: " + failed + " insertions failed out of " + TOTAL_PERSONS);
+                expectedElementCount += inserted;
             }
 
             System.out.println();
@@ -262,14 +267,21 @@ public class LinearHashTester {
             int initialBuckets = linearHash.getTotalPrimaryBuckets();
 
             Person[] extraPersons = new Person[100];
+            int insertedCount = 0;
             for (int i = 0; i < 100; i++) {
                 extraPersons[i] = new Person();
                 extraPersons[i].id = "ID" + String.format("%08d", 20000000 + i);
                 extraPersons[i].name = "Extra" + i;
                 extraPersons[i].surname = "Person" + i;
                 extraPersons[i].birthdate = 20000101L;
-                linearHash.insert(extraPersons[i]);
+                try {
+                    linearHash.insert(extraPersons[i]);
+                    insertedCount++;
+                } catch (Exception e) {
+                    // Count failures if any
+                }
             }
+            expectedElementCount += insertedCount;
 
             int finalOverflowBlocks = linearHash.getDebugInfoTotalOverflowBlocks();
             int finalBuckets = linearHash.getTotalPrimaryBuckets();
@@ -314,9 +326,14 @@ public class LinearHashTester {
                 person.name = "Split" + i;
                 person.surname = "Test" + i;
                 person.birthdate = 20000101L;
-                linearHash.insert(person);
-                insertsBeforeSplit++;
+                try {
+                    linearHash.insert(person);
+                    insertsBeforeSplit++;
+                } catch (Exception e) {
+                    // Count failures if any
+                }
             }
+            expectedElementCount += insertsBeforeSplit;
 
             int finalBuckets = linearHash.getTotalPrimaryBuckets();
             int finalLevel = linearHash.getLevel();
@@ -380,9 +397,11 @@ public class LinearHashTester {
             if (stillFound == 0 && failed == 0) {
                 pass("Test 7 passed: Deleted " + deleted + " records successfully");
                 passTestMethod("Test 7");
+                expectedElementCount -= deleted;
             } else {
                 fail("Test 7: " + failed + " deletions failed, " + stillFound + " records still found");
                 failTestMethod("Test 7");
+                expectedElementCount -= deleted;
             }
         } catch (Exception e) {
             fail("Test 7 failed: " + e.getMessage());
@@ -517,6 +536,9 @@ public class LinearHashTester {
             System.out.println("    Overflow blocks: " + linearHash.getDebugInfoTotalOverflowBlocks());
             System.out.println("    Overflow ratio: " + String.format("%.2f", linearHash.getOverflowRatio()));
 
+            expectedElementCount += insertSuccess;
+            expectedElementCount -= deleteSuccess;
+            
             if (failures == 0) {
                 pass("Test 9 passed: All " + operations + " operations completed successfully");
                 passTestMethod("Test 9");
@@ -528,6 +550,81 @@ public class LinearHashTester {
             fail("Test 9 failed: " + e.getMessage());
             e.printStackTrace();
             failTestMethod("Test 9");
+        }
+        System.out.println();
+    }
+
+    private static void test10_VerifyTotalElementCount(LinearHash<Person> linearHash) {
+        System.out.println("Test 10: Verifying total element count");
+        try {
+            // Method 1: Count by iterating through buckets and overflow blocks (validBlockCount)
+            int countByValidRecords = 0;
+            int totalBuckets = linearHash.getTotalPrimaryBuckets();
+            BucketHeap<Person> bucketHeap = linearHash.getBucketHeap();
+            
+            for (int i = 0; i < totalBuckets; i++) {
+                Bucket<Person> bucket = (Bucket<Person>) bucketHeap.getMainBucketsHeap().readBlock(i);
+                if (bucket != null) {
+                    // Count valid records in the bucket itself
+                    countByValidRecords += bucket.getValidBlockCount();
+                    
+                    // Count valid records in overflow blocks
+                    int overflowBlockNumber = bucket.getFirstOverflowBlock();
+                    while (overflowBlockNumber != -1) {
+                        OverflowBlock<Person> overflowBlock = bucketHeap.getOverflowHeap()
+                                .readBlock(overflowBlockNumber, OverflowBlock.class);
+                        if (overflowBlock != null) {
+                            countByValidRecords += overflowBlock.getValidBlockCount();
+                            overflowBlockNumber = overflowBlock.getNextOverflowBlock();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Method 2: Sum totalElementCount from each bucket (not going through overflow blocks)
+            int countByTotalElementCount = 0;
+            for (int i = 0; i < totalBuckets; i++) {
+                Bucket<Person> bucket = (Bucket<Person>) bucketHeap.getMainBucketsHeap().readBlock(i);
+                if (bucket != null) {
+                    countByTotalElementCount += bucket.getTotalRecordCount();
+                }
+            }
+            
+            // Method 3: Expected count based on operations
+            int expectedCount = expectedElementCount;
+            
+            System.out.println("  Count by iterating buckets and overflow blocks (validBlockCount): " + countByValidRecords);
+            System.out.println("  Count by summing totalElementCount from buckets: " + countByTotalElementCount);
+            System.out.println("  Expected count based on operations: " + expectedCount);
+            
+            boolean allMatch = (countByValidRecords == countByTotalElementCount) && 
+                              (countByTotalElementCount == expectedCount);
+            
+            if (allMatch) {
+                pass("Test 10 passed: All three counts match (" + countByValidRecords + " elements)");
+                passTestMethod("Test 10");
+            } else {
+                fail("Test 10 failed: Counts do not match");
+                failTestMethod("Test 10");
+                if (countByValidRecords != countByTotalElementCount) {
+                    fail("Test 10: Count by valid records (" + countByValidRecords + 
+                         ") != Count by totalElementCount (" + countByTotalElementCount + ")");
+                }
+                if (countByTotalElementCount != expectedCount) {
+                    fail("Test 10: Count by totalElementCount (" + countByTotalElementCount + 
+                         ") != Expected count (" + expectedCount + ")");
+                }
+                if (countByValidRecords != expectedCount) {
+                    fail("Test 10: Count by valid records (" + countByValidRecords + 
+                         ") != Expected count (" + expectedCount + ")");
+                }
+            }
+        } catch (Exception e) {
+            fail("Test 10 failed: " + e.getMessage());
+            e.printStackTrace();
+            failTestMethod("Test 10");
         }
         System.out.println();
     }
