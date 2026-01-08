@@ -12,8 +12,8 @@ import UnsortedFile.StorableRecord;
 public class LinearHash<T extends StorableRecord> {
 
     private static final int M = 2;
-    private static final double SPLIT_THRESHOLD = 0.9;
-    private static final double MERGE_THRESHOLD = 0.15;
+    private static final double SPLIT_THRESHOLD = 0.8;
+    private static final double MERGE_THRESHOLD = 0.3;
 
     private BucketHeap<T> bucketHeap;
     private Function<T, Integer> keyExtractor;
@@ -24,6 +24,7 @@ public class LinearHash<T extends StorableRecord> {
 
     private int debugInfoTotalOverflowBlocks;
 
+    // Creating a new LinearHash
     public LinearHash(String mainBucketsPath, String overflowBlocksPath, int mainBucketsBlockSize,
             int overflowBlockSize, Class<T> recordClass, Function<T, Integer> keyExtractor) {
         this.keyExtractor = keyExtractor;
@@ -36,6 +37,32 @@ public class LinearHash<T extends StorableRecord> {
         this.totalPrimaryBuckets = M;
 
         bucketHeap.getMainBucketsHeap().extendToBlockCount(M);
+        updateDebugInfo();
+    }
+
+    // Opening an existing LinearHash
+    public LinearHash(String mainBucketsPath, String mainMetadataPath,
+            String overflowBlocksPath, String overflowMetadataPath,
+            Class<T> recordClass, Function<T, Integer> keyExtractor) {
+        this.keyExtractor = keyExtractor;
+        this.bucketHeap = new BucketHeap<>(mainBucketsPath, mainMetadataPath,
+                overflowBlocksPath, overflowMetadataPath, recordClass);
+
+        // Calculate totalPrimaryBuckets from actual block count
+        this.totalPrimaryBuckets = bucketHeap.getMainBucketsHeap().getTotalBlockCount();
+        
+        // Derive level and splitPointer from totalPrimaryBuckets
+        // Formula: totalPrimaryBuckets = M * 2^level + splitPointer
+        // where 0 <= splitPointer < M * 2^level
+        this.level = 0;
+        int threshold = M;
+        while (threshold * 2 <= totalPrimaryBuckets) {
+            level++;
+            threshold *= 2;
+        }
+        this.splitPointer = totalPrimaryBuckets - (M * (1 << level));
+        
+        this.debugInfoTotalOverflowBlocks = 0;
         updateDebugInfo();
     }
 

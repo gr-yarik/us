@@ -17,8 +17,8 @@ public class LinearHashTester {
     private static final String MAIN_METADATA_FILE = "linearhash_main.meta";
     private static final String OVERFLOW_BLOCKS_FILE = "linearhash_overflow";
     private static final String OVERFLOW_METADATA_FILE = "linearhash_overflow.meta";
-    private static final int BLOCK_SIZE = 250; // 512;
-    private static final int OVERFLOW_BLOCK_SIZE = 200; //256;
+    private static final int BLOCK_SIZE = 2500; // 512;
+    private static final int OVERFLOW_BLOCK_SIZE = 4000; // 256;
     private static final int TOTAL_PERSONS = 2000;
 
     private static int testsPassed = 0;
@@ -29,17 +29,19 @@ public class LinearHashTester {
     private static int expectedElementCount = 0;
 
     private static int extractKey(Person person) {
-       return Integer.parseInt(person.id.substring(2));
+        return Integer.parseInt(person.id.substring(2));
         // if (person.id != null && person.id.startsWith("ID")) {
-        //     try {
-                // String numericPart = person.id.substring(2);
-        //         return Integer.parseInt(numericPart);
-        //     } catch (NumberFormatException e) {
-        //         return Math.abs(person.id.hashCode());
-        //     }
+        // try {
+        // String numericPart = person.id.substring(2);
+        // return Integer.parseInt(numericPart);
+        // } catch (NumberFormatException e) {
+        // return Math.abs(person.id.hashCode());
+        // }
         // }
         // return Math.abs(person.id != null ? person.id.hashCode() : 0);
     }
+
+    public static LinearHash<Person> linearHash;
 
     public static void main(String[] args) {
         System.out.println("========================================");
@@ -47,15 +49,33 @@ public class LinearHashTester {
         System.out.println("========================================\n");
 
         try {
+
             cleanupTestFiles();
 
-            test1_InstantiateLinearHash();
+            // Option 1: Create NEW LinearHash (use when starting fresh)
+            linearHash = new LinearHash<>(
+                    MAIN_BUCKETS_FILE,
+                    OVERFLOW_BLOCKS_FILE,
+                    BLOCK_SIZE,
+                    OVERFLOW_BLOCK_SIZE,
+                    Person.class,
+                    LinearHashTester::extractKey);
+
+            // Option 2: Open EXISTING LinearHash from files (use to reopen previously saved
+            // data)
+            // linearHash = new LinearHash<>(
+            // MAIN_BUCKETS_FILE,
+            // MAIN_METADATA_FILE,
+            // OVERFLOW_BLOCKS_FILE,
+            // OVERFLOW_METADATA_FILE,
+            // Person.class,
+            // LinearHashTester::extractKey);
+
+            LinearHashDebugger.launchAndWait(linearHash);
 
             Person[] persons = test2_GeneratePersons();
 
-            LinearHash<Person> linearHash = test3_InsertRecords(persons);
-
-           
+            test3_InsertRecords(persons);
 
             test4_VerifyAllRecords(linearHash, persons);
 
@@ -70,20 +90,20 @@ public class LinearHashTester {
             test9_RandomOperations(linearHash, persons);
 
             test10_VerifyTotalElementCount(linearHash);
-             // Launch debugger UI (non-blocking)
-             if (linearHash != null) {
-                LinearHashDebugger.launch(linearHash);
-                System.out.println("Debugger UI launched. LinearHash will remain open while debugger is active.\n");
-            }
+            // Launch debugger UI (non-blocking)
+            // if (linearHash != null) {
+            // LinearHashDebugger.launch(linearHash);
+            // System.out.println("Debugger UI launched. LinearHash will remain open while
+            // debugger is active.\n");
+            // }
 
-            // Note: linearHash.close() is commented out to keep it open for the debugger
-            // The debugger will keep the LinearHash instance alive
-            //linearHash.close();
+            // linearHash.close() is now handled by the debugger on window close
+            // linearHash.close();
 
             printSummary();
 
         } catch (Exception e) {
-            System.err.println("\n✗ FATAL ERROR: " + e.getMessage());
+            System.err.println("\n FATAL ERROR: " + e.getMessage());
             e.printStackTrace();
             testsFailed++;
             printSummary();
@@ -92,39 +112,17 @@ public class LinearHashTester {
 
     private static void cleanupTestFiles() {
         System.out.println("Cleaning up test files...");
-        new File(MAIN_BUCKETS_FILE).delete();
-        new File(MAIN_METADATA_FILE).delete();
-        new File(OVERFLOW_BLOCKS_FILE).delete();
-        new File(OVERFLOW_METADATA_FILE).delete();
-        System.out.println("✓ Cleanup complete\n");
-    }
+        boolean mainDeleted = new File(MAIN_BUCKETS_FILE).delete();
+        boolean mainMetaDeleted = new File(MAIN_METADATA_FILE).delete();
+        boolean overflowDeleted = new File(OVERFLOW_BLOCKS_FILE).delete();
+        boolean overflowMetaDeleted = new File(OVERFLOW_METADATA_FILE).delete();
 
-    private static void test1_InstantiateLinearHash() {
-        System.out.println("Test 1: Instantiating LinearHash");
-        try {
-            LinearHash<Person> linearHash = new LinearHash<>(
-                    MAIN_BUCKETS_FILE,
-                    OVERFLOW_BLOCKS_FILE,
-                    BLOCK_SIZE,
-                    OVERFLOW_BLOCK_SIZE,
-                    Person.class,
-                    LinearHashTester::extractKey);
-
-            if (linearHash.getLevel() == 0 && linearHash.getSplitPointer() == 0) {
-                pass("Test 1 passed: LinearHash instantiated successfully");
-                System.out.println("  Initial level: " + linearHash.getLevel());
-                System.out.println("  Initial split pointer: " + linearHash.getSplitPointer());
-                System.out.println("  Initial buckets: " + linearHash.getTotalPrimaryBuckets());
-            } else {
-                fail("Test 1 failed: Initial state incorrect");
-            }
-
-            linearHash.close();
-        } catch (Exception e) {
-            fail("Test 1 failed: " + e.getMessage());
-            e.printStackTrace();
-        }
-        System.out.println();
+        System.out.println("  " + MAIN_BUCKETS_FILE + ": " + (mainDeleted ? "deleted" : "not found or failed"));
+        System.out.println("  " + MAIN_METADATA_FILE + ": " + (mainMetaDeleted ? "deleted" : "not found or failed"));
+        System.out.println("  " + OVERFLOW_BLOCKS_FILE + ": " + (overflowDeleted ? "deleted" : "not found or failed"));
+        System.out.println(
+                "  " + OVERFLOW_METADATA_FILE + ": " + (overflowMetaDeleted ? "deleted" : "not found or failed"));
+        System.out.println("[OK] Cleanup complete\n");
     }
 
     private static Person[] test2_GeneratePersons() {
@@ -145,7 +143,6 @@ public class LinearHashTester {
                 "Clark", "Ramirez", "Lewis", "Robinson", "Walker", "Young"
         };
 
-        int f = 2;
         for (int i = 0; i < TOTAL_PERSONS; i++) {
             Person person = new Person();
             person.name = firstNames[i % firstNames.length];
@@ -154,9 +151,8 @@ public class LinearHashTester {
             int month = 1 + (i % 12);
             int day = 1 + (i % 28);
             person.birthdate = Long.parseLong(String.format("%04d%02d%02d", year, month, day));
-            person.id = "ID" + String.format("%08d", 10000000 + i + f);
+            person.id = "ID" + String.format("%08d", 10000000 + i);
             persons[i] = person;
-            f+=3;
         }
 
         pass("Test 2 passed: Generated " + TOTAL_PERSONS + " Person objects");
@@ -165,20 +161,12 @@ public class LinearHashTester {
         return persons;
     }
 
-    private static LinearHash<Person> test3_InsertRecords(Person[] persons) {
+    private static void test3_InsertRecords(Person[] persons) {
         System.out.println("Test 3: Inserting " + TOTAL_PERSONS + " records into LinearHash");
         int inserted = 0;
         int failed = 0;
 
         try {
-            LinearHash<Person> linearHash = new LinearHash<>(
-                    MAIN_BUCKETS_FILE,
-                    OVERFLOW_BLOCKS_FILE,
-                    BLOCK_SIZE,
-                    OVERFLOW_BLOCK_SIZE,
-                    Person.class,
-                    LinearHashTester::extractKey);
-
             for (int i = 0; i < TOTAL_PERSONS; i++) {
                 try {
                     linearHash.insert(persons[i]);
@@ -214,12 +202,11 @@ public class LinearHashTester {
             }
 
             System.out.println();
-            return linearHash;
         } catch (Exception e) {
             fail("Test 3 failed: " + e.getMessage());
             e.printStackTrace();
             System.out.println();
-            return null;
+
         }
     }
 
@@ -281,7 +268,7 @@ public class LinearHashTester {
                     linearHash.insert(extraPersons[i]);
                     insertedCount++;
                 } catch (Exception e) {
-                    
+
                 }
             }
             expectedElementCount += insertedCount;
@@ -379,9 +366,9 @@ public class LinearHashTester {
                     deleted++;
                 } else {
                     failed++;
-                    
-                        fail("Test 7: Failed to delete person " + personToDelete.id);
-                    
+
+                    fail("Test 7: Failed to delete person " + personToDelete.id);
+
                 }
             }
 
@@ -453,7 +440,7 @@ public class LinearHashTester {
     private static void test9_RandomOperations(LinearHash<Person> linearHash, Person[] persons) {
         System.out.println("Test 9: Running random operations (insert, get, delete)");
         Random random = new Random(42);
-        int operations = 1500;
+        int operations = 15000;
         int insertOps = 0;
         int deleteOps = 0;
         int getOps = 0;
@@ -475,38 +462,32 @@ public class LinearHashTester {
                     person.name = "Random" + insertOps;
                     person.surname = "Person" + insertOps;
                     person.birthdate = 20000101L;
+                    linearHash.insert(person);
+                    insertedPersons.add(person);
+                    insertSuccess++;
 
-                    try {
-                        linearHash.insert(person);
-                        insertedPersons.add(person);
-                        insertSuccess++;
-                    } catch (Exception e) {
-                        failures++;
-                        if (failures <= 5) {
-                            fail("Test 9: Insert failed: " + e.getMessage());
-                        }
-                    }
                 } else if (rand < 0.7) {
-                    deleteOps++;
+
                     if (!insertedPersons.isEmpty()) {
+                        deleteOps++;
                         Person[] personArray = insertedPersons.toArray(new Person[0]);
                         Person personToDelete = personArray[random.nextInt(personArray.length)];
-                        try {
-                            boolean success = linearHash.delete(personToDelete);
-                            if (success) {
-                                insertedPersons.remove(personToDelete);
-                                deleteSuccess++;
+
+                        boolean success = linearHash.delete(personToDelete);
+                        if (success) {
+                            if(insertedPersons.remove(personToDelete) == false) {
+                                throw new Error("Something went wrong");
                             }
-                        } catch (Exception e) {
-                            failures++;
-                        
-                                fail("Test 9: Delete failed: " + e.getMessage());
-                            
+                            deleteSuccess++;
+                        } else {
+                            fail("Test 9: Delete failed: " + personToDelete.id);
                         }
+
                     }
                 } else {
-                    getOps++;
+                   
                     if (!insertedPersons.isEmpty()) {
+                        getOps++;
                         Person[] personArray = insertedPersons.toArray(new Person[0]);
                         Person personToGet = personArray[random.nextInt(personArray.length)];
                         try {
@@ -515,15 +496,15 @@ public class LinearHashTester {
                                 getSuccess++;
                             } else {
                                 failures++;
-                                
-                                    fail("Test 9: Get failed for person " + personToGet.id);
-                                
+
+                                fail("Test 9: Get failed for person " + personToGet.id);
+
                             }
                         } catch (Exception e) {
                             failures++;
-                           
-                                fail("Test 9: Get failed: " + e.getMessage());
-                            
+
+                            fail("Test 9: Get failed: " + e.getMessage());
+
                         }
                     }
                 }
@@ -542,7 +523,7 @@ public class LinearHashTester {
 
             expectedElementCount += insertSuccess;
             expectedElementCount -= deleteSuccess;
-            
+
             if (failures == 0) {
                 pass("Test 9 passed: All " + operations + " operations completed successfully");
                 passTestMethod("Test 9");
@@ -561,17 +542,18 @@ public class LinearHashTester {
     private static void test10_VerifyTotalElementCount(LinearHash<Person> linearHash) {
         System.out.println("Test 10: Verifying total element count");
         try {
-            // Method 1: Count by iterating through buckets and overflow blocks (validBlockCount)
+            // Method 1: Count by iterating through buckets and overflow blocks
+            // (validBlockCount)
             int countByValidRecords = 0;
             int totalBuckets = linearHash.getTotalPrimaryBuckets();
             BucketHeap<Person> bucketHeap = linearHash.getBucketHeap();
-            
+
             for (int i = 0; i < totalBuckets; i++) {
                 Bucket<Person> bucket = (Bucket<Person>) bucketHeap.getMainBucketsHeap().readBlock(i);
                 if (bucket != null) {
                     // Count valid records in the bucket itself
                     countByValidRecords += bucket.getValidBlockCount();
-                    
+
                     // Count valid records in overflow blocks
                     int overflowBlockNumber = bucket.getFirstOverflowBlock();
                     while (overflowBlockNumber != -1) {
@@ -586,8 +568,9 @@ public class LinearHashTester {
                     }
                 }
             }
-            
-            // Method 2: Sum totalElementCount from each bucket (not going through overflow blocks)
+
+            // Method 2: Sum totalElementCount from each bucket (not going through overflow
+            // blocks)
             int countByTotalElementCount = 0;
             for (int i = 0; i < totalBuckets; i++) {
                 Bucket<Person> bucket = (Bucket<Person>) bucketHeap.getMainBucketsHeap().readBlock(i);
@@ -595,17 +578,18 @@ public class LinearHashTester {
                     countByTotalElementCount += bucket.getTotalRecordCount();
                 }
             }
-            
+
             // Method 3: Expected count based on operations
             int expectedCount = expectedElementCount;
-            
-            System.out.println("  Count by iterating buckets and overflow blocks (validBlockCount): " + countByValidRecords);
+
+            System.out.println(
+                    "  Count by iterating buckets and overflow blocks (validBlockCount): " + countByValidRecords);
             System.out.println("  Count by summing totalElementCount from buckets: " + countByTotalElementCount);
             System.out.println("  Expected count based on operations: " + expectedCount);
-            
-            boolean allMatch = (countByValidRecords == countByTotalElementCount) && 
-                              (countByTotalElementCount == expectedCount);
-            
+
+            boolean allMatch = (countByValidRecords == countByTotalElementCount) &&
+                    (countByTotalElementCount == expectedCount);
+
             if (allMatch) {
                 pass("Test 10 passed: All three counts match (" + countByValidRecords + " elements)");
                 passTestMethod("Test 10");
@@ -613,16 +597,16 @@ public class LinearHashTester {
                 fail("Test 10 failed: Counts do not match");
                 failTestMethod("Test 10");
                 if (countByValidRecords != countByTotalElementCount) {
-                    fail("Test 10: Count by valid records (" + countByValidRecords + 
-                         ") != Count by totalElementCount (" + countByTotalElementCount + ")");
+                    fail("Test 10: Count by valid records (" + countByValidRecords +
+                            ") != Count by totalElementCount (" + countByTotalElementCount + ")");
                 }
                 if (countByTotalElementCount != expectedCount) {
-                    fail("Test 10: Count by totalElementCount (" + countByTotalElementCount + 
-                         ") != Expected count (" + expectedCount + ")");
+                    fail("Test 10: Count by totalElementCount (" + countByTotalElementCount +
+                            ") != Expected count (" + expectedCount + ")");
                 }
                 if (countByValidRecords != expectedCount) {
-                    fail("Test 10: Count by valid records (" + countByValidRecords + 
-                         ") != Expected count (" + expectedCount + ")");
+                    fail("Test 10: Count by valid records (" + countByValidRecords +
+                            ") != Expected count (" + expectedCount + ")");
                 }
             }
         } catch (Exception e) {
@@ -644,12 +628,12 @@ public class LinearHashTester {
     }
 
     private static void pass(String message) {
-        System.out.println("✓ " + message);
+        System.out.println("[PASS] " + message);
         testsPassed++;
     }
 
     private static void fail(String message) {
-        System.out.println("✗ " + message);
+        System.out.println("[FAIL] " + message);
         testsFailed++;
         failures.add(message);
     }
@@ -685,9 +669,9 @@ public class LinearHashTester {
         System.out.println("========================================");
 
         if (testMethodsFailed == 0) {
-            System.out.println("✓ ALL TEST METHODS PASSED!");
+            System.out.println("[PASS] ALL TEST METHODS PASSED!");
         } else {
-            System.out.println("✗ SOME TEST METHODS FAILED!");
+            System.out.println("[FAIL] SOME TEST METHODS FAILED!");
         }
         System.out.println("========================================\n");
     }

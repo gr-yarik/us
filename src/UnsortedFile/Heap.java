@@ -286,6 +286,10 @@ public class Heap<T extends StorableRecord> {
         return blockingFactor;
     }
 
+    public BlockManager getBlockManager() {
+        return blockManager;
+    }
+
     public void close() {
         if (blockManager != null) {
             blockManager.close();

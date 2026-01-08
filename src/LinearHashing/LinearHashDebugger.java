@@ -24,9 +24,15 @@ import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
+import UnsortedFile.BlockManager;
 import UnsortedFile.Heap;
 
 public class LinearHashDebugger extends JFrame {
@@ -43,6 +49,7 @@ public class LinearHashDebugger extends JFrame {
     private JButton findButton;
     private JButton removeButton;
     private JButton refreshButton;
+    private JButton reloadFilesButton;
     
     // UI Components - Main Buckets
     private JTable mainBucketsTable;
@@ -119,6 +126,17 @@ public class LinearHashDebugger extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
         
+        // Close LinearHash when window is closed
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (linearHash != null) {
+                    linearHash.close();
+                    System.out.println("LinearHash closed.");
+                }
+            }
+        });
+        
         // Operations Panel (Top)
         JPanel operationsPanel = createOperationsPanel();
         add(operationsPanel, BorderLayout.NORTH);
@@ -132,8 +150,7 @@ public class LinearHashDebugger extends JFrame {
         add(metadataPanel, BorderLayout.SOUTH);
         
         pack();
-        setLocationRelativeTo(null);
-        setSize(1400, 800);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
     }
     
     private JPanel createOperationsPanel() {
@@ -208,6 +225,10 @@ public class LinearHashDebugger extends JFrame {
         refreshButton = new JButton("Refresh");
         refreshButton.addActionListener(e -> refreshView());
         buttonPanel.add(refreshButton);
+        
+        reloadFilesButton = new JButton("Reload Files");
+        reloadFilesButton.addActionListener(e -> reloadFiles());
+        buttonPanel.add(reloadFilesButton);
         
         panel.add(buttonPanel, gbc);
         
@@ -308,7 +329,7 @@ public class LinearHashDebugger extends JFrame {
     private JPanel createMetadataPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         
-        metadataArea = new JTextArea(4, 80);
+        metadataArea = new JTextArea(8, 80);
         metadataArea.setEditable(false);
         metadataArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         JScrollPane scrollPane = new JScrollPane(metadataArea);
@@ -467,6 +488,32 @@ public class LinearHashDebugger extends JFrame {
         sb.append("Overflow Ratio:     ").append(String.format("%.4f", linearHash.getOverflowRatio())).append("\n");
         sb.append("Main Buckets Block Size: ").append(bucketHeap.getMainBucketsBlockSize()).append(" bytes\n");
         sb.append("Overflow Block Size:     ").append(bucketHeap.getOverflowBlockSize()).append(" bytes\n");
+        
+        // Overflow Heap BlockManager info
+        BlockManager overflowBlockManager = bucketHeap.getOverflowHeap().getBlockManager();
+        if (overflowBlockManager != null) {
+            sb.append("\n--- Overflow Heap BlockManager ---\n");
+            java.util.List<Integer> emptyBlocks = overflowBlockManager.getEmptyBlocks();
+            java.util.List<Integer> partiallyEmptyBlocks = overflowBlockManager.getPartiallyEmptyBlocks();
+            Collections.sort(emptyBlocks);
+            Collections.sort(partiallyEmptyBlocks);
+            
+            sb.append("Empty Blocks (").append(emptyBlocks.size()).append("): ");
+            if (emptyBlocks.isEmpty()) {
+                sb.append("none");
+            } else {
+                sb.append(emptyBlocks.toString());
+            }
+            sb.append("\n");
+            
+            sb.append("Partially Empty Blocks (").append(partiallyEmptyBlocks.size()).append("): ");
+            if (partiallyEmptyBlocks.isEmpty()) {
+                sb.append("none");
+            } else {
+                sb.append(partiallyEmptyBlocks.toString());
+            }
+            sb.append("\n");
+        }
         
         metadataArea.setText(sb.toString());
     }
@@ -768,6 +815,28 @@ public class LinearHashDebugger extends JFrame {
         }
     }
     
+    private void reloadFiles() {
+        try {
+            // Re-read both the main buckets file and overflow file from disk
+            this.bucketHeap = linearHash.getBucketHeap();
+            loadMainBucketsData();
+            loadOverflowBlocksData();
+            updateMainBucketsTable();
+            updateOverflowBlocksTable();
+            updateMetadata();
+            displayAllMainBuckets();
+            displayAllOverflowBlocks();
+            JOptionPane.showMessageDialog(this, 
+                "Both files reloaded successfully:\n- Main buckets file\n- Overflow blocks file", 
+                "Files Reloaded", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, 
+                "Error reloading files: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+    
     public static void launch(LinearHash<Person> linearHash) {
         SwingUtilities.invokeLater(() -> {
             try {
@@ -778,6 +847,31 @@ public class LinearHashDebugger extends JFrame {
             
             new LinearHashDebugger(linearHash).setVisible(true);
         });
+    }
+    
+    /**
+     * Launch the debugger and wait until it has finished loading data from files.
+     * This method blocks until the UI is ready.
+     */
+    public static void launchAndWait(LinearHash<Person> linearHash) {
+        CountDownLatch latch = new CountDownLatch(1);
+        
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            
+            new LinearHashDebugger(linearHash).setVisible(true);
+            latch.countDown(); // Signal that loading is complete
+        });
+        
+        try {
+            latch.await(); // Wait until the UI is ready
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }
 
