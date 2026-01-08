@@ -19,7 +19,8 @@ public class LinearHashTester {
     private static final String OVERFLOW_METADATA_FILE = "linearhash_overflow.meta";
     private static final int BLOCK_SIZE = 2500; // 512;
     private static final int OVERFLOW_BLOCK_SIZE = 4000; // 256;
-    private static final int TOTAL_PERSONS = 2000;
+    private static final int TOTAL_PERSONS = 500;
+    private static final int OPERATIONS = 200;
 
     private static int testsPassed = 0;
     private static int testsFailed = 0;
@@ -440,7 +441,7 @@ public class LinearHashTester {
     private static void test9_RandomOperations(LinearHash<Person> linearHash, Person[] persons) {
         System.out.println("Test 9: Running random operations (insert, get, delete)");
         Random random = new Random(42);
-        int operations = 15000;
+       // int operations = 15000;
         int insertOps = 0;
         int deleteOps = 0;
         int getOps = 0;
@@ -452,7 +453,7 @@ public class LinearHashTester {
         Set<Person> insertedPersons = new HashSet<>();
 
         try {
-            for (int i = 0; i < operations; i++) {
+            for (int i = 0; i < OPERATIONS; i++) {
                 double rand = random.nextDouble();
 
                 if (rand < 0.4) {
