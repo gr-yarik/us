@@ -19,8 +19,9 @@ public class LinearHashTester {
     private static final String OVERFLOW_METADATA_FILE = "linearhash_overflow.meta";
     private static final int BLOCK_SIZE = 2500; // 512;
     private static final int OVERFLOW_BLOCK_SIZE = 4000; // 256;
-    private static final int TOTAL_PERSONS = 500;
-    private static final int OPERATIONS = 200;
+    private static final int TOTAL_PERSONS = 5000;  // 199;
+    private static final int OPERATIONS = 2000;//10;
+    private static final int PERSONS_FOR_SPLIT = 500; //0;
 
     private static int testsPassed = 0;
     private static int testsFailed = 0;
@@ -51,7 +52,7 @@ public class LinearHashTester {
 
         try {
 
-            cleanupTestFiles();
+           cleanupTestFiles();
 
             // Option 1: Create NEW LinearHash (use when starting fresh)
             linearHash = new LinearHash<>(
@@ -63,7 +64,7 @@ public class LinearHashTester {
                     LinearHashTester::extractKey);
 
             // Option 2: Open EXISTING LinearHash from files (use to reopen previously saved
-            // data)
+            // data)    
             // linearHash = new LinearHash<>(
             // MAIN_BUCKETS_FILE,
             // MAIN_METADATA_FILE,
@@ -78,19 +79,22 @@ public class LinearHashTester {
 
             test3_InsertRecords(persons);
 
+
             test4_VerifyAllRecords(linearHash, persons);
 
             test5_TestOverflowHandling(linearHash);
 
-            test6_TestSplitOperation(linearHash);
 
-            test7_DeleteRecords(linearHash, persons);
+            
+           test6_TestSplitOperation(linearHash);
+           test7_DeleteRecords(linearHash, persons);
+           
 
-            test8_TestMergeOperation(linearHash);
+           test8_TestMergeOperation(linearHash);
 
-            test9_RandomOperations(linearHash, persons);
+           test9_RandomOperations(linearHash, persons);
 
-            test10_VerifyTotalElementCount(linearHash);
+           test10_VerifyTotalElementCount(linearHash);
             // Launch debugger UI (non-blocking)
             // if (linearHash != null) {
             // LinearHashDebugger.launch(linearHash);
@@ -311,7 +315,7 @@ public class LinearHashTester {
             System.out.println("    Overflow ratio: " + String.format("%.2f", linearHash.getOverflowRatio()));
 
             int insertsBeforeSplit = 0;
-            for (int i = 0; i < 500 && linearHash.getTotalPrimaryBuckets() == initialBuckets; i++) {
+            for (int i = 0; i < PERSONS_FOR_SPLIT && linearHash.getTotalPrimaryBuckets() == initialBuckets; i++) {
                 Person person = new Person();
                 person.id = "ID" + String.format("%08d", 30000000 + i);
                 person.name = "Split" + i;
@@ -526,10 +530,10 @@ public class LinearHashTester {
             expectedElementCount -= deleteSuccess;
 
             if (failures == 0) {
-                pass("Test 9 passed: All " + operations + " operations completed successfully");
+                pass("Test 9 passed: All " + OPERATIONS + " operations completed successfully");
                 passTestMethod("Test 9");
             } else {
-                fail("Test 9: " + failures + " operations failed out of " + operations);
+                fail("Test 9: " + failures + " operations failed out of " + OPERATIONS);
                 failTestMethod("Test 9");
             }
         } catch (Exception e) {

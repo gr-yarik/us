@@ -243,14 +243,14 @@ public class Heap<T extends StorableRecord> {
     }
 
     public void writeBlock(int blockNumber, Block<T> block) {
-        if(blockNumber==22 && block instanceof OverflowBlock) {
-            int i =0;
-        }
         long position = (long) blockNumber * blockSize;
         binaryFile.seek(position);
         byte[] blockData = block.ToByteArray();
         binaryFile.write(blockData);
+       // System.out.println(ff);
+        ff++;
     }
+    static int ff = 0;
 
     public void extendToBlockCount(int blockCount) {
         if (!directBlockAddressingMode) {

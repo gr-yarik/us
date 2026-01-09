@@ -203,6 +203,7 @@ public class BucketHeap<T extends StorableRecord> {
 
     }
 
+@SuppressWarnings("unchecked")
     private boolean deleteFromOverflowChain(BlockAndNumber bucketAndNumber, T partialRecord) {
         Bucket<T> bucket = (Bucket<T>) bucketAndNumber.blockInstance;
         int bucketNumber = bucketAndNumber.blockNumber;
@@ -233,15 +234,15 @@ public class BucketHeap<T extends StorableRecord> {
                         boolean needsShuffle = minRequiredOverflowBlocks < bucket.getTotalOverflowBlockCount()
                                 && bucket.getFirstOverflowBlock() != -1;
 
-                        // if (block.isEmpty()) {
-                        //     // Only update pointers if we aren't about to wipe the whole chain via shuffle
-                        //     int nextBlockNum = block.getNextOverflowBlock();
-                        //     if (previousOverflowBlock.get() == null) {
-                        //         bucket.setFirstOverflowBlock(nextBlockNum);
-                        //     } else {
-                        //         previousOverflowBlock.get().setNextOverflowBlock(nextBlockNum);
-                        //         overflowHeap.writeBlock(previousOverflowBlockNumber.get(), previousOverflowBlock.get());
-                        //     }
+                        if (block.isEmpty()) {
+                            // Only update pointers if we aren't about to wipe the whole chain via shuffle
+                            int nextBlockNum = block.getNextOverflowBlock();
+                            if (previousOverflowBlock.get() == null) {
+                                bucket.setFirstOverflowBlock(nextBlockNum);
+                            } else {
+                                previousOverflowBlock.get().setNextOverflowBlock(nextBlockNum);
+                                overflowHeap.writeBlock(previousOverflowBlockNumber.get(), previousOverflowBlock.get());
+                            }
 
 
                         //     // Fix: Only decrement manually if shuffle is NOT going to happen.
