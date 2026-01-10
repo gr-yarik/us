@@ -1,8 +1,6 @@
 package LinearHashing;
 
-import java.lang.reflect.Array;
 import java.util.*;
-import java.util.concurrent.atomic.*;
 import UnsortedFile.*;
 
 public class BucketHeap<T extends StorableRecord> {
@@ -97,8 +95,7 @@ public class BucketHeap<T extends StorableRecord> {
                 overflowBlockNumber = overflowHeap.getNumberForNewBlock() + numberOfBlocksAtTheEnd;
                 numberOfBlocksAtTheEnd++;
             } else {
-                // Verify the empty block from manager has correct properties
-                OverflowBlock<T> blockFromDisk = overflowHeap.readBlock(overflowBlockNumber, OverflowBlock.class);
+                 OverflowBlock<T> blockFromDisk = overflowHeap.readBlock(overflowBlockNumber, OverflowBlock.class);
                 if (blockFromDisk.getValidBlockCount() != 0) {
                     throw new Error("Empty block from manager must have validBlockCount == 0, got: " 
                         + blockFromDisk.getValidBlockCount() + " at block " + overflowBlockNumber);
@@ -172,110 +169,74 @@ public class BucketHeap<T extends StorableRecord> {
     public record BlockAndNumber(Block blockInstance, int blockNumber) {
     }
 
+    @SuppressWarnings("unchecked")
     public boolean delete(int bucketNumber, T partialRecord) {
+         if (!mainBucketsHeap.checkIfBlockExists(bucketNumber)) {
+            return false;
+        }
 
-        AtomicBoolean deletedFromMainHeap = new AtomicBoolean();
-        deletedFromMainHeap.set(false);
+        Bucket<T> bucket = (Bucket<T>) mainBucketsHeap.readBlock(bucketNumber);
+        List<OverflowBlockAndNumber> overflowBlocks = new ArrayList<>();
+        boolean deletionOccurred = false;
 
-        AtomicBoolean deletedFromOverflowHeap = new AtomicBoolean();
-        deletedFromOverflowHeap.set(false);
+         if (bucket.delete(partialRecord)) {
+            deletionOccurred = true;
+        } else {
+             int overflowBlockNumber = bucket.getFirstOverflowBlock();
+            OverflowBlock<T> previousOverflowBlock = null;
+            int previousOverflowBlockNumber = -1;
 
-        deletedFromMainHeap.set(mainBucketsHeap.delete(bucketNumber, partialRecord, Bucket.class,
+            while (overflowBlockNumber != -1) {
+                OverflowBlock<T> overflowBlock = overflowHeap.readBlock(overflowBlockNumber, OverflowBlock.class);
+                
+                if (overflowBlock.delete(partialRecord)) {
+                     deletionOccurred = true;
+                    bucket.decrementTotalElementCountBy(1);
+                    overflowBlocks.add(new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber));
 
-                (bucket) -> {
-                    int minRequiredOverflowBlocks = minimalRequiredOverflowBlockNumber(bucket.getTotalRecordCount(),
-                            true);
-
-                    if (minRequiredOverflowBlocks < bucket.getTotalOverflowBlockCount()
-                            && bucket.getFirstOverflowBlock() != -1) {
-                        List<OverflowBlockAndNumber> overflowBlocks = new ArrayList<OverflowBlockAndNumber>();
-                        shuffle((Bucket<T>) bucket, minRequiredOverflowBlocks, overflowBlocks);
-                    }
-                    mainBucketsHeap.writeBlock(bucketNumber, bucket);
-                },
-                (bucket) -> {
-                    BlockAndNumber bucketAndNumber = new BlockAndNumber(bucket, bucketNumber);
-                    boolean deleted = deleteFromOverflowChain(bucketAndNumber, partialRecord);
-                    deletedFromOverflowHeap.set(deleted);
-                }));
-
-        return deletedFromMainHeap.get() || deletedFromOverflowHeap.get();
-
-    }
-
-@SuppressWarnings("unchecked")
-    private boolean deleteFromOverflowChain(BlockAndNumber bucketAndNumber, T partialRecord) {
-        Bucket<T> bucket = (Bucket<T>) bucketAndNumber.blockInstance;
-        int bucketNumber = bucketAndNumber.blockNumber;
-
-        AtomicInteger nextOverflowBlockNumber = new AtomicInteger(bucket.getFirstOverflowBlock());
-        AtomicReference<OverflowBlock<T>> previousOverflowBlock = new AtomicReference<>();
-        AtomicInteger previousOverflowBlockNumber = new AtomicInteger();
-        AtomicBoolean deletionOccurred = new AtomicBoolean(false);
-
-        List<OverflowBlockAndNumber> visitedOverflowBlocks = new ArrayList<>();
-
-        while (nextOverflowBlockNumber.get() != -1) {
-            final int currentBlockNum = nextOverflowBlockNumber.get();
-
-            boolean deleted = overflowHeap.delete(currentBlockNum, partialRecord, OverflowBlock.class,
-
-                    (block) -> {
-                        // Inside deleteFromOverflowChain, within the onSuccessDelete callback:
-                        deletionOccurred.set(true);
-                        visitedOverflowBlocks
-                                .add(new OverflowBlockAndNumber((OverflowBlock<T>) block, currentBlockNum));
-
-                        bucket.decrementTotalElementCountBy(1);
-
-                        // Identify if a shuffle is needed BEFORE modifying the overflow chain
-                        int minRequiredOverflowBlocks = minimalRequiredOverflowBlockNumber(bucket.getTotalRecordCount(),
-                                true);
-                        boolean needsShuffle = minRequiredOverflowBlocks < bucket.getTotalOverflowBlockCount()
-                                && bucket.getFirstOverflowBlock() != -1;
-
-                        if (block.isEmpty()) {
-                            // Only update pointers if we aren't about to wipe the whole chain via shuffle
-                            int nextBlockNum = block.getNextOverflowBlock();
-                            if (previousOverflowBlock.get() == null) {
-                                bucket.setFirstOverflowBlock(nextBlockNum);
-                            } else {
-                                previousOverflowBlock.get().setNextOverflowBlock(nextBlockNum);
-                                overflowHeap.writeBlock(previousOverflowBlockNumber.get(), previousOverflowBlock.get());
-                            }
-
-
-                        //     // Fix: Only decrement manually if shuffle is NOT going to happen.
-                        //     // Otherwise, collectAllRecords (inside shuffle) will handle resetting the
-                        //     // count.
-                        //     if (!needsShuffle) {
-                        //         bucket.decrementOverflowBlockCountBy(1);
-                        //     }
-                        // }
-
-                        if (needsShuffle) {
-                            shuffle(bucket, minRequiredOverflowBlocks, visitedOverflowBlocks);
+                     if (overflowBlock.isEmpty()) {
+                        int nextBlockNum = overflowBlock.getNextOverflowBlock();
+                        if (previousOverflowBlock == null) {
+                            bucket.setFirstOverflowBlock(nextBlockNum);
+                        } else {
+                            previousOverflowBlock.setNextOverflowBlock(nextBlockNum);
+                            overflowHeap.writeBlock(previousOverflowBlockNumber, previousOverflowBlock);
                         }
-                        mainBucketsHeap.writeBlock(bucketNumber, bucket);
+                    }
+                    break;
+                }
 
-                    },
-
-                    (overflowBlock) -> {
-
-                        visitedOverflowBlocks
-                                .add(new OverflowBlockAndNumber((OverflowBlock<T>) overflowBlock, currentBlockNum));
-
-                        previousOverflowBlock.set((OverflowBlock<T>) overflowBlock);
-                        previousOverflowBlockNumber.set(currentBlockNum);
-                        nextOverflowBlockNumber.set(overflowBlock.getNextOverflowBlock());
-                    });
-
-            if (deleted) {
-                break;
+                 overflowBlocks.add(new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber));
+                previousOverflowBlock = overflowBlock;
+                previousOverflowBlockNumber = overflowBlockNumber;
+                overflowBlockNumber = overflowBlock.getNextOverflowBlock();
             }
         }
 
-        return deletionOccurred.get();
+        if (deletionOccurred) {
+             int minRequiredOverflowBlocks = minimalRequiredOverflowBlockNumber(bucket.getTotalRecordCount(), true);
+            boolean needsShuffle = minRequiredOverflowBlocks < bucket.getTotalOverflowBlockCount();
+            
+            if (needsShuffle) {
+                 shuffle(bucket, minRequiredOverflowBlocks, overflowBlocks);
+            } else if (!overflowBlocks.isEmpty()) {
+                 OverflowBlockAndNumber deletedFrom = overflowBlocks.getLast();
+                
+                if (deletedFrom.block.isEmpty()) {
+                     deletedFrom.block.setNextOverflowBlock(-1);
+                    bucket.decrementOverflowBlockCountBy(1);
+                    //overflowHeap.writeBlock(deletedFrom.number, deletedFrom.block);
+                    overflowHeap.manageEmptyBlock(deletedFrom.number);
+                    overflowHeap.truncateAtTheEndIfPossible();
+                } else {
+                    overflowHeap.writeBlock(deletedFrom.number, deletedFrom.block);
+                }
+            }
+
+             mainBucketsHeap.writeBlock(bucketNumber, bucket);
+        }
+
+        return deletionOccurred;
     }
 
     private void shuffle(Bucket<T> bucket, int minRequiredOverflowBlocks, List<OverflowBlockAndNumber> overflowBlocks) {

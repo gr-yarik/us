@@ -259,10 +259,19 @@ public class Heap<T extends StorableRecord> {
 
         int currentBlocks = getTotalBlockCount();
         if (blockCount > currentBlocks) {
-            for (int i = currentBlocks; i < blockCount; i++) {
-                Block<T> emptyBlock = new Bucket<>(blockingFactor, blockSize, recordClass);
-                writeBlock(i, emptyBlock);
+            int blocksToAdd = blockCount - currentBlocks;
+            byte[] allBlocksData = new byte[blocksToAdd * blockSize];
+            
+            Block<T> emptyBlock = new Bucket<>(blockingFactor, blockSize, recordClass);
+            byte[] singleBlockData = emptyBlock.ToByteArray();
+            
+            for (int i = 0; i < blocksToAdd; i++) {
+                System.arraycopy(singleBlockData, 0, allBlocksData, i * blockSize, blockSize);
             }
+            
+            long position = (long) currentBlocks * blockSize;
+            binaryFile.seek(position);
+            binaryFile.write(allBlocksData);
         }
     }
 
