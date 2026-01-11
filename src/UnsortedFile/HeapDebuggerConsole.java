@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
-import LinearHashing.Person;
+import LinearHashing.Core.Person;
 
 public class HeapDebuggerConsole {
     

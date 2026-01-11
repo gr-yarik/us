@@ -9,5 +9,5 @@ public interface StorableRecord {
     
     public byte[] ToByteArray();
     
-    public void FromByteArray(byte[] paArray);
+    public void FromByteArray(byte[] inputArray);
 }

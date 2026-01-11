@@ -17,7 +17,6 @@ public class BlockManager {
     private String metadataFilePath;
     private int blockSize;
 
-    // used when starting from scratch
     public BlockManager(String metadataFilePath, int blockSize) {
         this.metadataFilePath = metadataFilePath;
         this.blockSize = blockSize;
@@ -26,7 +25,6 @@ public class BlockManager {
         this.metadataFile = new BinaryFile(metadataFilePath);
     }
 
-    // used when restoring state
     public BlockManager(String metadataFilePath) {
         this.metadataFilePath = metadataFilePath;
         this.metadataFile = new BinaryFile(metadataFilePath);
@@ -100,22 +98,22 @@ public class BlockManager {
 
     public void saveToFile() {
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(baos);
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
 
-            dos.writeInt(blockSize);
+            dataOutputStream.writeInt(blockSize);
 
-            dos.writeInt(emptyBlocks.size());
+            dataOutputStream.writeInt(emptyBlocks.size());
             for (int idx : emptyBlocks) {
-                dos.writeInt(idx);
+                dataOutputStream.writeInt(idx);
             }
 
-            dos.writeInt(partiallyEmptyBlocks.size());
+            dataOutputStream.writeInt(partiallyEmptyBlocks.size());
             for (int idx : partiallyEmptyBlocks) {
-                dos.writeInt(idx);
+                dataOutputStream.writeInt(idx);
             }
 
-            byte[] data = baos.toByteArray();
+            byte[] data = byteArrayOutputStream.toByteArray();
 
             metadataFile.seek(0);
             metadataFile.write(data);
@@ -133,21 +131,21 @@ public class BlockManager {
             }
 
             metadataFile.seek(0);
-            DataInputStream dis = new DataInputStream(
+            DataInputStream dataInputStream = new DataInputStream(
                     new ByteArrayInputStream(metadataFile.read((int) metadataFile.getSize())));
 
-            this.blockSize = dis.readInt();
+            this.blockSize = dataInputStream.readInt();
 
-            int emptyCount = dis.readInt();
+            int emptyCount = dataInputStream.readInt();
             this.emptyBlocks = new ArrayList<>();
             for (int i = 0; i < emptyCount; i++) {
-                this.emptyBlocks.add(dis.readInt());
+                this.emptyBlocks.add(dataInputStream.readInt());
             }
 
-            int partialCount = dis.readInt();
+            int partialCount = dataInputStream.readInt();
             this.partiallyEmptyBlocks = new ArrayList<>();
             for (int i = 0; i < partialCount; i++) {
-                this.partiallyEmptyBlocks.add(dis.readInt());
+                this.partiallyEmptyBlocks.add(dataInputStream.readInt());
             }
 
         } catch (IOException e) {

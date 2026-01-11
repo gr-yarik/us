@@ -36,50 +36,50 @@ class Person implements StorableRecord {
     }
 
     public byte[] ToByteArray() {
-        ByteArrayOutputStream hlpByteArrayOutputStream= new ByteArrayOutputStream();
-        DataOutputStream hlpOutStream = new DataOutputStream(hlpByteArrayOutputStream);
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
         try{
-            hlpOutStream.writeLong(birthdate);
+            dataOutputStream.writeLong(birthdate);
             byte[] nameBytes = (name != null ? name : "").getBytes(StandardCharsets.US_ASCII);
             int nameLength = Math.min(nameBytes.length, 15);
             byte[] nameFixed = new byte[15];
             System.arraycopy(nameBytes, 0, nameFixed, 0, nameLength);
-            hlpOutStream.write(nameFixed);
-            hlpOutStream.writeByte(nameLength);
+            dataOutputStream.write(nameFixed);
+            dataOutputStream.writeByte(nameLength);
             byte[] surnameBytes = (surname != null ? surname : "").getBytes(StandardCharsets.US_ASCII);
             int surnameLength = Math.min(surnameBytes.length, 15);
             byte[] surnameFixed = new byte[15];
             System.arraycopy(surnameBytes, 0, surnameFixed, 0, surnameLength);
-            hlpOutStream.write(surnameFixed);
-            hlpOutStream.writeByte(surnameLength);
+            dataOutputStream.write(surnameFixed);
+            dataOutputStream.writeByte(surnameLength);
             byte[] idBytes = (id != null ? id : "").getBytes(StandardCharsets.US_ASCII);
             int idLength = Math.min(idBytes.length, 15);
             byte[] idFixed = new byte[15];
             System.arraycopy(idBytes, 0, idFixed, 0, idLength);
-            hlpOutStream.write(idFixed);
-            hlpOutStream.writeByte(idLength);
-            return hlpByteArrayOutputStream.toByteArray();
+            dataOutputStream.write(idFixed);
+            dataOutputStream.writeByte(idLength);
+            return byteArrayOutputStream.toByteArray();
         }catch (Exception e){
             throw new IllegalStateException("Error during conversion to byte array.");
         }
     }
   
-  public void FromByteArray(byte[] paArray) {
-          ByteArrayInputStream hlpByteArrayInputStream = new ByteArrayInputStream(paArray);
-          DataInputStream hlpInStream = new DataInputStream(hlpByteArrayInputStream);
+  public void FromByteArray(byte[] inputArray) {
+          ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(inputArray);
+          DataInputStream dataInputStream = new DataInputStream(byteArrayInputStream);
           try {
-              this.birthdate = hlpInStream.readLong();
+              this.birthdate = dataInputStream.readLong();
               byte[] nameBytes = new byte[15];
-              hlpInStream.readFully(nameBytes);
-              int nameLength = hlpInStream.readByte() & 0xFF;
+              dataInputStream.readFully(nameBytes);
+              int nameLength = dataInputStream.readByte() & 0xFF;
               this.name = new String(nameBytes, 0, nameLength, StandardCharsets.US_ASCII);
               byte[] surnameBytes = new byte[15];
-              hlpInStream.readFully(surnameBytes);
-              int surnameLength = hlpInStream.readByte() & 0xFF;
+              dataInputStream.readFully(surnameBytes);
+              int surnameLength = dataInputStream.readByte() & 0xFF;
               this.surname = new String(surnameBytes, 0, surnameLength, StandardCharsets.US_ASCII);
               byte[] idBytes = new byte[15];
-              hlpInStream.readFully(idBytes);
-              int idLength = hlpInStream.readByte() & 0xFF;
+              dataInputStream.readFully(idBytes);
+              int idLength = dataInputStream.readByte() & 0xFF;
               this.id = new String(idBytes, 0, idLength, StandardCharsets.US_ASCII);
   
           } catch (IOException e) {

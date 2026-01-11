@@ -1,11 +1,9 @@
 package UnsortedFile;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.function.Consumer;
 
 import LinearHashing.Bucket;
-import LinearHashing.OverflowBlock;
 
 public class Heap<T extends StorableRecord> {
 
@@ -22,55 +20,66 @@ public class Heap<T extends StorableRecord> {
         try {
             this.recordClass = recordClass;
             this.directBlockAddressingMode = directBlockAddressingMode;
+            this.blockSize = blockSize;
 
             File heapFile = new File(pathToFile);
-
             if (heapFile.exists()) {
-                String metadataPath = pathToFile + ".meta";
-                this.blockManager = new BlockManager(metadataPath);
-                this.blockSize = blockManager.getBlockSize();
+                heapFile.delete();
+            }
+            String metadataPath = pathToFile + ".meta";
+            File metaFile = new File(metadataPath);
+            if (metaFile.exists()) {
+                metaFile.delete();
+            }
 
-                T templateRecord = recordClass.getDeclaredConstructor().newInstance();
+            T templateRecord = recordClass.getDeclaredConstructor().newInstance();
+            this.recordSize = templateRecord.sizeInBytes();
 
-                this.recordSize = templateRecord.sizeInBytes();
+            this.blockingFactor = (int) Math.floor((double) (this.blockSize - reservedBytes) / this.recordSize);
 
-                this.blockingFactor = (int) Math.floor((double) (this.blockSize - reservedBytes) / this.recordSize);
+            if (this.blockingFactor < 1) {
+                throw new Error("Record size (" + recordSize + ") is larger than Block size (" + blockSize + ")");
+            }
 
-                if (this.blockingFactor < 1) {
-                    throw new Error(
-                            "Record size (" + recordSize + ") is larger than Block size (" + blockSize + ")");
-                }
+            this.binaryFile = new BinaryFile(pathToFile);
+            this.blockManager = new BlockManager(metadataPath, blockSize);
 
-                this.binaryFile = new BinaryFile(pathToFile);
-
-                if (directBlockAddressingMode) {
-                    this.blockManager = null;
-                }
-            } else {
-                String metadataPath = pathToFile + ".meta";
-                File metaFile = new File(metadataPath);
-                if (metaFile.exists()) {
-                    metaFile.delete();
-                }
-
-                this.blockSize = blockSize;
-
-                T templateRecord = recordClass.getDeclaredConstructor().newInstance();
-                this.recordSize = templateRecord.sizeInBytes();
-
-                this.blockingFactor = (int) Math.floor((double) (this.blockSize - reservedBytes) / this.recordSize);
-
-                if (this.blockingFactor < 1) {
-                    throw new Error();
-                }
-
-                this.binaryFile = new BinaryFile(pathToFile);
-
-                this.blockManager = new BlockManager(metadataPath, blockSize);
+            if (directBlockAddressingMode) {
+                this.blockManager.close();
+                this.blockManager = null;
             }
         } catch (Exception e) {
+            throw new Error("Failed to create new heap", e);
         }
-        ;
+    }
+
+    public Heap(String pathToFile, String metadataPath, Class<T> recordClass, boolean directBlockAddressingMode,
+            int reservedBytes) {
+        try {
+            this.recordClass = recordClass;
+            this.directBlockAddressingMode = directBlockAddressingMode;
+
+            this.blockManager = new BlockManager(metadataPath);
+            this.blockSize = blockManager.getBlockSize();
+
+            T templateRecord = recordClass.getDeclaredConstructor().newInstance();
+            this.recordSize = templateRecord.sizeInBytes();
+
+            this.blockingFactor = (int) Math.floor((double) (this.blockSize - reservedBytes) / this.recordSize);
+
+            if (this.blockingFactor < 1) {
+                throw new Error("Record size (" + recordSize + ") is larger than Block size (" + blockSize + ")");
+            }
+
+            this.binaryFile = new BinaryFile(pathToFile);
+
+            if (directBlockAddressingMode) {
+                this.blockManager.close();
+                this.blockManager = null;
+            }
+        } catch (Exception e) {
+            throw new Error("Failed to open existing heap", e);
+        }
     }
 
     public int insert(T instance) {
@@ -247,10 +256,7 @@ public class Heap<T extends StorableRecord> {
         binaryFile.seek(position);
         byte[] blockData = block.ToByteArray();
         binaryFile.write(blockData);
-       // System.out.println(ff);
-        ff++;
     }
-    static int ff = 0;
 
     public void extendToBlockCount(int blockCount) {
         if (!directBlockAddressingMode) {

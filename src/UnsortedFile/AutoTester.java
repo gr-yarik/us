@@ -4,7 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import LinearHashing.Person;
+import LinearHashing.Core.Person;
 
 public class AutoTester {
     

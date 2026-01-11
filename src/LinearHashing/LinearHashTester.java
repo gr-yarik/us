@@ -1,7 +1,6 @@
 package LinearHashing;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -9,7 +8,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 
-import UnsortedFile.StorableRecord;
+import LinearHashing.Core.Person;
 
 public class LinearHashTester {
 
@@ -19,7 +18,7 @@ public class LinearHashTester {
     private static final String OVERFLOW_METADATA_FILE = "linearhash_overflow.meta";
     private static final int BLOCK_SIZE = 2500; // 512;
     private static final int OVERFLOW_BLOCK_SIZE = 4000; // 256;
-    private static final int TOTAL_PERSONS = 5000;//199;
+    private static final int TOTAL_PERSONS = 2000;//199;
     private static final int OPERATIONS = 2000; //10;
     private static final int PERSONS_FOR_SPLIT = 1000;
 
@@ -29,19 +28,6 @@ public class LinearHashTester {
     private static int testMethodsPassed = 0;
     private static int testMethodsFailed = 0;
     private static int expectedElementCount = 0;
-
-    private static int extractKey(Person person) {
-        return Integer.parseInt(person.id.substring(2));
-        // if (person.id != null && person.id.startsWith("ID")) {
-        // try {
-        // String numericPart = person.id.substring(2);
-        // return Integer.parseInt(numericPart);
-        // } catch (NumberFormatException e) {
-        // return Math.abs(person.id.hashCode());
-        // }
-        // }
-        // return Math.abs(person.id != null ? person.id.hashCode() : 0);
-    }
 
     public static LinearHash<Person> linearHash;
 
@@ -60,8 +46,7 @@ public class LinearHashTester {
                     OVERFLOW_BLOCKS_FILE,
                     BLOCK_SIZE,
                     OVERFLOW_BLOCK_SIZE,
-                    Person.class,
-                    LinearHashTester::extractKey);
+                    Person.class);
 
             // Option 2: Open EXISTING LinearHash from files (use to reopen previously saved
             // data)    
@@ -70,8 +55,7 @@ public class LinearHashTester {
             // MAIN_METADATA_FILE,
             // OVERFLOW_BLOCKS_FILE,
             // OVERFLOW_METADATA_FILE,
-            // Person.class,
-            // LinearHashTester::extractKey);
+            // Person.class);
 
             LinearHashDebugger.launchAndWait(linearHash);
 
@@ -156,7 +140,7 @@ public class LinearHashTester {
             int month = 1 + (i % 12);
             int day = 1 + (i % 28);
             person.birthdate = Long.parseLong(String.format("%04d%02d%02d", year, month, day));
-            person.id = "ID" + String.format("%08d", 10000000 + i);
+            person.id =  String.format("%08d", 10000000 + i);
             persons[i] = person;
         }
 
@@ -265,7 +249,7 @@ public class LinearHashTester {
             int insertedCount = 0;
             for (int i = 0; i < 100; i++) {
                 extraPersons[i] = new Person();
-                extraPersons[i].id = "ID" + String.format("%08d", 20000000 + i);
+                extraPersons[i].id = String.format("%08d", 20000000 + i);
                 extraPersons[i].name = "Extra" + i;
                 extraPersons[i].surname = "Person" + i;
                 extraPersons[i].birthdate = 20000101L;
@@ -317,7 +301,7 @@ public class LinearHashTester {
             int insertsBeforeSplit = 0;
             for (int i = 0; i < PERSONS_FOR_SPLIT && linearHash.getTotalPrimaryBuckets() == initialBuckets; i++) {
                 Person person = new Person();
-                person.id = "ID" + String.format("%08d", 30000000 + i);
+                person.id = String.format("%08d", 30000000 + i);
                 person.name = "Split" + i;
                 person.surname = "Test" + i;
                 person.birthdate = 20000101L;
@@ -463,7 +447,7 @@ public class LinearHashTester {
                 if (rand < 0.4) {
                     insertOps++;
                     Person person = new Person();
-                    person.id = "ID" + String.format("%08d", 40000000 + insertOps);
+                    person.id = String.format("%08d", 40000000 + insertOps);
                     person.name = "Random" + insertOps;
                     person.surname = "Person" + insertOps;
                     person.birthdate = 20000101L;

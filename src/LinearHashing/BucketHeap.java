@@ -95,14 +95,14 @@ public class BucketHeap<T extends StorableRecord> {
                 overflowBlockNumber = overflowHeap.getNumberForNewBlock() + numberOfBlocksAtTheEnd;
                 numberOfBlocksAtTheEnd++;
             } else {
-                 OverflowBlock<T> blockFromDisk = overflowHeap.readBlock(overflowBlockNumber, OverflowBlock.class);
+                OverflowBlock<T> blockFromDisk = overflowHeap.readBlock(overflowBlockNumber, OverflowBlock.class);
                 if (blockFromDisk.getValidBlockCount() != 0) {
-                    throw new Error("Empty block from manager must have validBlockCount == 0, got: " 
-                        + blockFromDisk.getValidBlockCount() + " at block " + overflowBlockNumber);
+                    throw new Error("Empty block from manager must have validBlockCount == 0, got: "
+                            + blockFromDisk.getValidBlockCount() + " at block " + overflowBlockNumber);
                 }
                 if (blockFromDisk.getNextOverflowBlock() != -1) {
-                    throw new Error("Empty block from manager must have nextOverflowBlock == -1, got: " 
-                        + blockFromDisk.getNextOverflowBlock() + " at block " + overflowBlockNumber);
+                    throw new Error("Empty block from manager must have nextOverflowBlock == -1, got: "
+                            + blockFromDisk.getNextOverflowBlock() + " at block " + overflowBlockNumber);
                 }
             }
 
@@ -127,24 +127,20 @@ public class BucketHeap<T extends StorableRecord> {
 
     public BucketHeap(String mainBucketsPath, String overflowBlocksPath, int mainBucketsBlockSize,
             int overflowBlockSize, Class<T> recordClass) {
-        this.mainBucketsBlockSize = mainBucketsBlockSize;
-        this.overflowBlockSize = overflowBlockSize;
         this.recordClass = recordClass;
         this.mainBucketsHeap = new Heap<>(mainBucketsPath, mainBucketsBlockSize, recordClass, true, 16);
         this.overflowHeap = new Heap<>(overflowBlocksPath, overflowBlockSize, recordClass, false, 8);
+        this.mainBucketsBlockSize = mainBucketsHeap.getBlockSize();
+        this.overflowBlockSize = overflowHeap.getBlockSize();
     }
 
     public BucketHeap(String mainBucketsPath, String mainMetadataPath,
             String overflowBlocksPath, String overflowMetadataPath, Class<T> recordClass) {
         this.recordClass = recordClass;
-        UnsortedFile.BlockManager mainMetadata = new UnsortedFile.BlockManager(mainMetadataPath);
-        UnsortedFile.BlockManager overflowMetadata = new UnsortedFile.BlockManager(overflowMetadataPath);
-        this.mainBucketsBlockSize = mainMetadata.getBlockSize();
-        this.overflowBlockSize = overflowMetadata.getBlockSize();
-        mainMetadata.close();
-        overflowMetadata.close();
-        this.mainBucketsHeap = new Heap<T>(mainBucketsPath, mainBucketsBlockSize, recordClass, true, 16);
-        this.overflowHeap = new Heap<T>(overflowBlocksPath, overflowBlockSize, recordClass, false, 8);
+        this.mainBucketsHeap = new Heap<>(mainBucketsPath, mainMetadataPath, recordClass, true, 16);
+        this.overflowHeap = new Heap<>(overflowBlocksPath, overflowMetadataPath, recordClass, false, 8);
+        this.mainBucketsBlockSize = mainBucketsHeap.getBlockSize();
+        this.overflowBlockSize = overflowHeap.getBlockSize();
     }
 
     public void insertIntoBucket(int bucketNumber, T record) {
@@ -171,7 +167,7 @@ public class BucketHeap<T extends StorableRecord> {
 
     @SuppressWarnings("unchecked")
     public boolean delete(int bucketNumber, T partialRecord) {
-         if (!mainBucketsHeap.checkIfBlockExists(bucketNumber)) {
+        if (!mainBucketsHeap.checkIfBlockExists(bucketNumber)) {
             return false;
         }
 
@@ -179,22 +175,22 @@ public class BucketHeap<T extends StorableRecord> {
         List<OverflowBlockAndNumber> overflowBlocks = new ArrayList<>();
         boolean deletionOccurred = false;
 
-         if (bucket.delete(partialRecord)) {
+        if (bucket.delete(partialRecord)) {
             deletionOccurred = true;
         } else {
-             int overflowBlockNumber = bucket.getFirstOverflowBlock();
+            int overflowBlockNumber = bucket.getFirstOverflowBlock();
             OverflowBlock<T> previousOverflowBlock = null;
             int previousOverflowBlockNumber = -1;
 
             while (overflowBlockNumber != -1) {
                 OverflowBlock<T> overflowBlock = overflowHeap.readBlock(overflowBlockNumber, OverflowBlock.class);
-                
+
                 if (overflowBlock.delete(partialRecord)) {
-                     deletionOccurred = true;
+                    deletionOccurred = true;
                     bucket.decrementTotalElementCountBy(1);
                     overflowBlocks.add(new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber));
 
-                     if (overflowBlock.isEmpty()) {
+                    if (overflowBlock.isEmpty()) {
                         int nextBlockNum = overflowBlock.getNextOverflowBlock();
                         if (previousOverflowBlock == null) {
                             bucket.setFirstOverflowBlock(nextBlockNum);
@@ -206,7 +202,7 @@ public class BucketHeap<T extends StorableRecord> {
                     break;
                 }
 
-                 overflowBlocks.add(new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber));
+                overflowBlocks.add(new OverflowBlockAndNumber(overflowBlock, overflowBlockNumber));
                 previousOverflowBlock = overflowBlock;
                 previousOverflowBlockNumber = overflowBlockNumber;
                 overflowBlockNumber = overflowBlock.getNextOverflowBlock();
@@ -214,18 +210,17 @@ public class BucketHeap<T extends StorableRecord> {
         }
 
         if (deletionOccurred) {
-             int minRequiredOverflowBlocks = minimalRequiredOverflowBlockNumber(bucket.getTotalRecordCount(), true);
+            int minRequiredOverflowBlocks = minimalRequiredOverflowBlockNumber(bucket.getTotalRecordCount(), true);
             boolean needsShuffle = minRequiredOverflowBlocks < bucket.getTotalOverflowBlockCount();
-            
+
             if (needsShuffle) {
-                 shuffle(bucket, minRequiredOverflowBlocks, overflowBlocks);
+                shuffle(bucket, minRequiredOverflowBlocks, overflowBlocks);
             } else if (!overflowBlocks.isEmpty()) {
-                 OverflowBlockAndNumber deletedFrom = overflowBlocks.getLast();
-                
+                OverflowBlockAndNumber deletedFrom = overflowBlocks.getLast();
+
                 if (deletedFrom.block.isEmpty()) {
-                     deletedFrom.block.setNextOverflowBlock(-1);
+                    deletedFrom.block.setNextOverflowBlock(-1);
                     bucket.decrementOverflowBlockCountBy(1);
-                    //overflowHeap.writeBlock(deletedFrom.number, deletedFrom.block);
                     overflowHeap.manageEmptyBlock(deletedFrom.number);
                     overflowHeap.truncateAtTheEndIfPossible();
                 } else {
@@ -233,7 +228,7 @@ public class BucketHeap<T extends StorableRecord> {
                 }
             }
 
-             mainBucketsHeap.writeBlock(bucketNumber, bucket);
+            mainBucketsHeap.writeBlock(bucketNumber, bucket);
         }
 
         return deletionOccurred;
@@ -313,16 +308,16 @@ public class BucketHeap<T extends StorableRecord> {
                 throw new Error("Block is not empty. This should not happen");
             }
             freedOverflowBlock.setNextOverflowBlock(-1);
-            
+
             if (freedOverflowBlock.getValidBlockCount() != 0) {
-                throw new Error("Empty overflow block must have validBlockCount == 0, got: " 
-                    + freedOverflowBlock.getValidBlockCount());
+                throw new Error("Empty overflow block must have validBlockCount == 0, got: "
+                        + freedOverflowBlock.getValidBlockCount());
             }
             if (freedOverflowBlock.getNextOverflowBlock() != -1) {
-                throw new Error("Empty overflow block must have nextOverflowBlock == -1, got: " 
-                    + freedOverflowBlock.getNextOverflowBlock());
+                throw new Error("Empty overflow block must have nextOverflowBlock == -1, got: "
+                        + freedOverflowBlock.getNextOverflowBlock());
             }
-            
+
             overflowHeap.writeBlock(blockEntry.number, freedOverflowBlock);
             overflowHeap.manageEmptyBlock(blockEntry.number);
         }

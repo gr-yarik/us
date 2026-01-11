@@ -26,24 +26,24 @@ public class OverflowBlock<T extends StorableRecord> extends Block<T> {
 
     @Override
     public byte[] ToByteArray() {
-        ByteArrayOutputStream hlpByteArrayOutputStream = new ByteArrayOutputStream();
-        DataOutputStream hlpOutStream = new DataOutputStream(hlpByteArrayOutputStream);
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
         try {
             for (int i = 0; i < blockingFactor; i++) {
                 if (i < validBlockCount) {
                     byte[] recordBytes = records[i].ToByteArray();
-                    hlpOutStream.write(recordBytes);
+                    dataOutputStream.write(recordBytes);
                 } else {
                     byte[] emptyRecord = new byte[recordSize];
-                    hlpOutStream.write(emptyRecord);
+                    dataOutputStream.write(emptyRecord);
                 }
             }
 
-            hlpOutStream.writeInt(nextOverflowBlock);
+            dataOutputStream.writeInt(nextOverflowBlock);
 
-            hlpOutStream.writeInt(validBlockCount);
+            dataOutputStream.writeInt(validBlockCount);
 
-            byte[] result = hlpByteArrayOutputStream.toByteArray();
+            byte[] result = byteArrayOutputStream.toByteArray();
 
             if (result.length > blockSize) {
                 throw new IllegalStateException(
@@ -61,18 +61,18 @@ public class OverflowBlock<T extends StorableRecord> extends Block<T> {
     }
 
     @Override
-    public void FromByteArray(byte[] paArray, Class<T> recordClass) {
-        ByteArrayInputStream hlpByteArrayInputStream = new ByteArrayInputStream(paArray);
-        DataInputStream hlpInStream = new DataInputStream(hlpByteArrayInputStream);
+    public void FromByteArray(byte[] inputArray, Class<T> recordClass) {
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(inputArray);
+        DataInputStream dataInputStream = new DataInputStream(byteArrayInputStream);
         try {
             byte[][] recordBytesArray = new byte[blockingFactor][recordSize];
             for (int i = 0; i < blockingFactor; i++) {
-                hlpInStream.readFully(recordBytesArray[i]);
+                dataInputStream.readFully(recordBytesArray[i]);
             }
 
-            nextOverflowBlock = hlpInStream.readInt();
+            nextOverflowBlock = dataInputStream.readInt();
 
-            validBlockCount = hlpInStream.readInt();
+            validBlockCount = dataInputStream.readInt();
 
             for (int i = 0; i < blockingFactor; i++) {
                 T record = recordClass.getDeclaredConstructor().newInstance();

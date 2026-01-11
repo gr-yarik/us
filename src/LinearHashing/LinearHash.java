@@ -1,22 +1,17 @@
 package LinearHashing;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
-import LinearHashing.BucketHeap.BlockAndNumber;
 import LinearHashing.BucketHeap.OverflowBlockAndNumber;
-import UnsortedFile.StorableRecord;
 
-public class LinearHash<T extends StorableRecord> {
+public class LinearHash<T extends HashableStorableRecord> {
 
     private static final int M = 2;
     private static final double SPLIT_THRESHOLD = 0.8;
     private static final double MERGE_THRESHOLD = 0.3;
 
     private BucketHeap<T> bucketHeap;
-    private Function<T, Integer> keyExtractor;
 
     private int level;
     private int splitPointer;
@@ -24,10 +19,8 @@ public class LinearHash<T extends StorableRecord> {
 
     private int debugInfoTotalOverflowBlocks;
 
-    // Creating a new LinearHash
     public LinearHash(String mainBucketsPath, String overflowBlocksPath, int mainBucketsBlockSize,
-            int overflowBlockSize, Class<T> recordClass, Function<T, Integer> keyExtractor) {
-        this.keyExtractor = keyExtractor;
+            int overflowBlockSize, Class<T> recordClass) {
         this.bucketHeap = new BucketHeap<>(mainBucketsPath, overflowBlocksPath, mainBucketsBlockSize, overflowBlockSize,
                 recordClass);
 
@@ -40,20 +33,14 @@ public class LinearHash<T extends StorableRecord> {
         updateDebugInfo();
     }
 
-    // Opening an existing LinearHash
     public LinearHash(String mainBucketsPath, String mainMetadataPath,
             String overflowBlocksPath, String overflowMetadataPath,
-            Class<T> recordClass, Function<T, Integer> keyExtractor) {
-        this.keyExtractor = keyExtractor;
+            Class<T> recordClass) {
         this.bucketHeap = new BucketHeap<>(mainBucketsPath, mainMetadataPath,
                 overflowBlocksPath, overflowMetadataPath, recordClass);
 
-        // Calculate totalPrimaryBuckets from actual block count
         this.totalPrimaryBuckets = bucketHeap.getMainBucketsHeap().getTotalBlockCount();
         
-        // Derive level and splitPointer from totalPrimaryBuckets
-        // Formula: totalPrimaryBuckets = M * 2^level + splitPointer
-        // where 0 <= splitPointer < M * 2^level
         this.level = 0;
         int threshold = M;
         while (threshold * 2 <= totalPrimaryBuckets) {
@@ -77,7 +64,7 @@ public class LinearHash<T extends StorableRecord> {
     }
 
     private int calculateBucketAddress(int key) {
-        // Urči skupinu i, Ak i < S tak i := Hu+1(K)
+        key = Math.abs(key);
         int address = hashU(key);
         if (address < splitPointer) {
             address = hashNext(key);
@@ -86,9 +73,9 @@ public class LinearHash<T extends StorableRecord> {
     }
 
     public void insert(T record) {
-        int key = keyExtractor.apply(record);
+        int key = record.hashableIdentifier();
         int bucketAddress = calculateBucketAddress(key);
-
+        System.out.print("Inserted into bucket: " + bucketAddress);
         bucketHeap.insertIntoBucket(bucketAddress, record);
         updateDebugInfo();
 
@@ -99,13 +86,13 @@ public class LinearHash<T extends StorableRecord> {
     }
 
     public T get(T partialRecord) {
-        int key = keyExtractor.apply(partialRecord);
+        int key = partialRecord.hashableIdentifier();
         int bucketAddress = calculateBucketAddress(key);
         return bucketHeap.get(bucketAddress, partialRecord);
     }
 
     public boolean delete(T partialRecord) {
-        int key = keyExtractor.apply(partialRecord);
+        int key = partialRecord.hashableIdentifier();
         int bucketAddress = calculateBucketAddress(key);
 
         boolean deleted = bucketHeap.delete(bucketAddress, partialRecord);
@@ -118,7 +105,6 @@ public class LinearHash<T extends StorableRecord> {
 
     private void mergeIfNeeded() {
         double overflowRatio = calculateOverflowRatio();
-        // Ak hustota d klesla pod hranicu
         if (overflowRatio < MERGE_THRESHOLD && totalPrimaryBuckets > M) {
             performMerge();
         }
@@ -139,8 +125,6 @@ public class LinearHash<T extends StorableRecord> {
             bucketHeap.clearOverflowChain(overflowBlocks);
         }
 
-        //bucketToSplit.setFirstOverflowBlock(-1);
-    //   bucketToSplit.setOverflowBlockCount(0);
         bucketHeap.getMainBucketsHeap().writeBlock(splitPointer, bucketToSplit);
 
         int newBucketAddress = splitPointer + (M * (1 << level));
@@ -148,7 +132,7 @@ public class LinearHash<T extends StorableRecord> {
         List<T> recordsForOldBucket = new ArrayList<>();
         List<T> recordsForNewBucket = new ArrayList<>();
         for (T record : allRecords) {
-            int recordKey = keyExtractor.apply(record);
+            int recordKey = record.hashableIdentifier();
             int newAddress = hashNext(recordKey);
 
             if (newAddress == splitPointer) {
