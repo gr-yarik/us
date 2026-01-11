@@ -87,24 +87,15 @@ public class BucketHeap<T extends StorableRecord> {
     private void appendNewOverflowBlocks(int howManyBlocksToAdd, Bucket<T> bucket,
             List<OverflowBlockAndNumber> overflowBlocks, OverflowBlockAndNumber lastOverflowBlock) {
         int numberOfBlocksAtTheEnd = 0;
+        int indexOfNewBlock = overflowHeap.getNumberForNewBlock();
         for (int i = 0; i < howManyBlocksToAdd; i++) {
             OverflowBlock<T> newOverflowBlock = new OverflowBlock<>(overflowHeap.getBlockingFactor(),
                     overflowHeap.getBlockSize(), recordClass);
             int overflowBlockNumber = overflowHeap.getEmptyBlock();
             if (overflowBlockNumber == -1) {
-                overflowBlockNumber = overflowHeap.getNumberForNewBlock() + numberOfBlocksAtTheEnd;
+                overflowBlockNumber = indexOfNewBlock + numberOfBlocksAtTheEnd;
                 numberOfBlocksAtTheEnd++;
-            } else {
-                OverflowBlock<T> blockFromDisk = overflowHeap.readBlock(overflowBlockNumber, OverflowBlock.class);
-                if (blockFromDisk.getValidBlockCount() != 0) {
-                    throw new Error("Empty block from manager must have validBlockCount == 0, got: "
-                            + blockFromDisk.getValidBlockCount() + " at block " + overflowBlockNumber);
-                }
-                if (blockFromDisk.getNextOverflowBlock() != -1) {
-                    throw new Error("Empty block from manager must have nextOverflowBlock == -1, got: "
-                            + blockFromDisk.getNextOverflowBlock() + " at block " + overflowBlockNumber);
-                }
-            }
+            } 
 
             if (i == 0) {
                 if (lastOverflowBlock == null) {
@@ -258,7 +249,7 @@ public class BucketHeap<T extends StorableRecord> {
         }
     }
 
-    private List<OverflowBlockAndNumber> insertCompactly(
+    public List<OverflowBlockAndNumber> insertCompactly(
             Bucket<T> bucket,
             List<T> allRecords,
             List<OverflowBlockAndNumber> overflowBlocks) {
@@ -304,20 +295,7 @@ public class BucketHeap<T extends StorableRecord> {
         for (int i = 0; i < overflowBlocks.size(); i++) {
             OverflowBlockAndNumber blockEntry = overflowBlocks.get(i);
             OverflowBlock<T> freedOverflowBlock = (OverflowBlock<T>) blockEntry.block;
-            if (!freedOverflowBlock.isEmpty()) {
-                throw new Error("Block is not empty. This should not happen");
-            }
             freedOverflowBlock.setNextOverflowBlock(-1);
-
-            if (freedOverflowBlock.getValidBlockCount() != 0) {
-                throw new Error("Empty overflow block must have validBlockCount == 0, got: "
-                        + freedOverflowBlock.getValidBlockCount());
-            }
-            if (freedOverflowBlock.getNextOverflowBlock() != -1) {
-                throw new Error("Empty overflow block must have nextOverflowBlock == -1, got: "
-                        + freedOverflowBlock.getNextOverflowBlock());
-            }
-
             overflowHeap.writeBlock(blockEntry.number, freedOverflowBlock);
             overflowHeap.manageEmptyBlock(blockEntry.number);
         }

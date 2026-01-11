@@ -40,7 +40,7 @@ public class LinearHash<T extends HashableStorableRecord> {
                 overflowBlocksPath, overflowMetadataPath, recordClass);
 
         this.totalPrimaryBuckets = bucketHeap.getMainBucketsHeap().getTotalBlockCount();
-        
+
         this.level = 0;
         int threshold = M;
         while (threshold * 2 <= totalPrimaryBuckets) {
@@ -48,7 +48,7 @@ public class LinearHash<T extends HashableStorableRecord> {
             threshold *= 2;
         }
         this.splitPointer = totalPrimaryBuckets - (M * (1 << level));
-        
+
         this.debugInfoTotalOverflowBlocks = 0;
         updateDebugInfo();
     }
@@ -75,7 +75,7 @@ public class LinearHash<T extends HashableStorableRecord> {
     public void insert(T record) {
         int key = record.hashableIdentifier();
         int bucketAddress = calculateBucketAddress(key);
-        System.out.print("Inserted into bucket: " + bucketAddress);
+        // System.out.print("Inserted into bucket: " + bucketAddress + "\n");
         bucketHeap.insertIntoBucket(bucketAddress, record);
         updateDebugInfo();
 
@@ -119,16 +119,10 @@ public class LinearHash<T extends HashableStorableRecord> {
     private void performSplit() {
         Bucket<T> bucketToSplit = (Bucket<T>) bucketHeap.getMainBucketsHeap().readBlock(splitPointer);
         List<T> allRecords = new ArrayList<>();
-        {
-            List<OverflowBlockAndNumber> overflowBlocks= new ArrayList<>();
-            bucketHeap.collectAllRecords(bucketToSplit, allRecords, overflowBlocks);
-            bucketHeap.clearOverflowChain(overflowBlocks);
-        }
-
-        bucketHeap.getMainBucketsHeap().writeBlock(splitPointer, bucketToSplit);
+        List<OverflowBlockAndNumber> overflowBlocks = new ArrayList<>();
+        bucketHeap.collectAllRecords(bucketToSplit, allRecords, overflowBlocks);
 
         int newBucketAddress = splitPointer + (M * (1 << level));
-    
         List<T> recordsForOldBucket = new ArrayList<>();
         List<T> recordsForNewBucket = new ArrayList<>();
         for (T record : allRecords) {
@@ -141,7 +135,14 @@ public class LinearHash<T extends HashableStorableRecord> {
                 recordsForNewBucket.add(record);
             }
         }
-        bucketHeap.insertIntoBucket(splitPointer, recordsForOldBucket);
+        List<OverflowBlockAndNumber> freedBlocks = bucketHeap.insertCompactly(bucketToSplit, recordsForOldBucket,
+                overflowBlocks);
+        if (bucketToSplit.getTotalOverflowBlockCount() > 0 && !overflowBlocks.isEmpty()) {
+            bucketToSplit.setFirstOverflowBlock(overflowBlocks.get(0).number());
+        }
+        bucketHeap.clearOverflowChain(freedBlocks);
+        bucketHeap.getMainBucketsHeap().writeBlock(splitPointer, bucketToSplit);
+
         bucketHeap.insertIntoBucket(newBucketAddress, recordsForNewBucket);
 
         splitPointer++;
@@ -181,7 +182,7 @@ public class LinearHash<T extends HashableStorableRecord> {
         List<OverflowBlockAndNumber> overflowBlocks = new ArrayList<>();
         bucketHeap.collectAllRecords(lastBucket, recordsToMerge, overflowBlocks);
         bucketHeap.clearOverflowChain(overflowBlocks);
-        
+
         bucketHeap.insertIntoBucket(b, recordsToMerge);
         bucketHeap.getMainBucketsHeap().writeBlock(a, lastBucket);
 
