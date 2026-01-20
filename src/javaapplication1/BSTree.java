@@ -9,21 +9,21 @@ import java.io.ByteArrayOutputStream;
 import UnsortedFile.BinaryFile;
 import UnsortedFile.StorableRecord;
 
-public class BSTree {
+public class BSTree<T extends TreeNodeData> {
 
-    protected BSTreeNode root;
+    protected BSTreeNode<T> root;
 
     public BSTree() {
         this.root = null;
     }
 
-    public void insert(TreeNodeData newData) {
+    public void insert(T newData) {
         insert(newData, null);
     }
 
-    public void delete(TreeNodeData data) {
+    public void delete(T data) {
 
-        TryFindRecord result = tryFind(data, null);
+        TryFindRecord<T> result = tryFind(data, null);
 
         if(result.found()) {
             delete(result.searchStoppedAtNode());
@@ -34,12 +34,12 @@ public class BSTree {
         
     }
 
-    public record DeletionRecord(ChildSide side, BSTreeNode parentNode) {}
+    public record DeletionRecord<T extends TreeNodeData>(ChildSide side, BSTreeNode<T> parentNode) {}
     
-    protected DeletionRecord deleteNode(BSTreeNode node) {
+    protected DeletionRecord<T> deleteNode(BSTreeNode<T> node) {
         if (node == null) return null;
         
-        BSTreeNode parent = node.getParent();
+        BSTreeNode<T> parent = node.getParent();
         ChildSide deletedSide = null;
         
         if (parent != null) {
@@ -55,10 +55,10 @@ public class BSTree {
             } else {
                 parent.setRightChild(null);
             }
-            return new DeletionRecord(deletedSide, parent);
+            return new DeletionRecord<>(deletedSide, parent);
 
         } else if (node.getLeftChild() == null || node.getRightChild() == null) {
-            BSTreeNode child = (node.getLeftChild() != null) ? node.getLeftChild() : node.getRightChild();
+            BSTreeNode<T> child = (node.getLeftChild() != null) ? node.getLeftChild() : node.getRightChild();
 
             if (parent == null) {
                 root = child;
@@ -72,24 +72,24 @@ public class BSTree {
             if (child != null) {
                 child.setParent(parent);
             }
-            return new DeletionRecord(deletedSide, parent);
+            return new DeletionRecord<>(deletedSide, parent);
 
         } else {
-            BSTreeNode successor = findMinimum(node.getRightChild());
+            BSTreeNode<T> successor = findMinimum(node.getRightChild());
             node.setData(successor.getData());
             return deleteNode(successor);
         }
     }
     
-    protected void delete(BSTreeNode node) {
+    protected void delete(BSTreeNode<T> node) {
         deleteNode(node);
     }
 
-    protected void rotateLeft(BSTreeNode pivotNode) {
+    protected void rotateLeft(BSTreeNode<T> pivotNode) {
         if (pivotNode == null || pivotNode.getRightChild() == null) return;
 
-        BSTreeNode newParent = pivotNode.getRightChild();
-        BSTreeNode leftSubtreeOfNewParent = newParent.getLeftChild();
+        BSTreeNode<T> newParent = pivotNode.getRightChild();
+        BSTreeNode<T> leftSubtreeOfNewParent = newParent.getLeftChild();
 
         newParent.setParent(pivotNode.getParent());
         if (pivotNode.getParent() == null) {
@@ -109,11 +109,11 @@ public class BSTree {
         pivotNode.setParent(newParent);
     }
 
-    protected void rotateRight(BSTreeNode pivotNode) {
+    protected void rotateRight(BSTreeNode<T> pivotNode) {
         if (pivotNode == null || pivotNode.getLeftChild() == null) return;
 
-        BSTreeNode newParent = pivotNode.getLeftChild();
-        BSTreeNode rightSubtreeOfNewParent = newParent.getRightChild();
+        BSTreeNode<T> newParent = pivotNode.getLeftChild();
+        BSTreeNode<T> rightSubtreeOfNewParent = newParent.getRightChild();
 
         newParent.setParent(pivotNode.getParent());
         if (pivotNode.getParent() == null) {
@@ -133,8 +133,8 @@ public class BSTree {
         pivotNode.setParent(newParent);
     }
     
-    protected BSTreeNode insert(TreeNodeData newData, Consumer<BSTreeNode> operation) {
-        TryFindRecord searchResult = tryFind(newData, operation);
+    protected BSTreeNode<T> insert(T newData, Consumer<BSTreeNode<T>> operation) {
+        TryFindRecord<T> searchResult = tryFind(newData, operation);
 
         if (searchResult.found()) {
             System.out.println("Error - key is already present in the tree: " + newData);
@@ -146,8 +146,8 @@ public class BSTree {
             root.setData(newData);
             return root;
         } else {
-            BSTreeNode newChild = createNode();
-            BSTreeNode searchStoppedAtNode = searchResult.searchStoppedAtNode();
+            BSTreeNode<T> newChild = createNode();
+            BSTreeNode<T> searchStoppedAtNode = searchResult.searchStoppedAtNode();
             newChild.setData(newData);
             newChild.setParent(searchStoppedAtNode);
             switch (searchResult.side()) {
@@ -168,7 +168,7 @@ public class BSTree {
         RIGHT, LEFT;
     }
     
-    protected ChildSide getChildSide(BSTreeNode node) {
+    protected ChildSide getChildSide(BSTreeNode<T> node) {
         if (node == null || node.getParent() == null) {
             return null;
         }
@@ -182,15 +182,15 @@ public class BSTree {
         return null;
     }
     
-    public record TryFindRecord(boolean found, BSTreeNode searchStoppedAtNode, ChildSide side) {}
+    public record TryFindRecord<T extends TreeNodeData>(boolean found, BSTreeNode<T> searchStoppedAtNode, ChildSide side) {}
     
-    protected TryFindRecord tryFind(TreeNodeData key, Consumer<BSTreeNode> operation){
-
+    protected TryFindRecord<T> tryFind(T key, Consumer<BSTreeNode<T>> operation){
+        
         if (root == null) {
-            return new TryFindRecord(false, null, null);
+            return new TryFindRecord<>(false, null, null);
         }
-
-        BSTreeNode currentNode = root;
+        
+        BSTreeNode<T> currentNode = root;
 
         while (true) {
             if (operation != null) {
@@ -201,23 +201,23 @@ public class BSTree {
 
             if (comparisonResult > 0) {
                 if (currentNode.getLeftChild() == null) {
-                    return new TryFindRecord(false, currentNode, ChildSide.LEFT);    
+                    return new TryFindRecord<>(false, currentNode, ChildSide.LEFT);    
                 }
                 currentNode = currentNode.getLeftChild();
              } else if (comparisonResult < 0) {
                 if (currentNode.getRightChild() == null) {
-                    return new TryFindRecord(false, currentNode, ChildSide.RIGHT);    
+                    return new TryFindRecord<>(false, currentNode, ChildSide.RIGHT);    
                 }
                 currentNode = currentNode.getRightChild();
              } else if (comparisonResult == 0) {
-                return new TryFindRecord(true, currentNode, null);
+                return new TryFindRecord<>(true, currentNode, null);
              }
         }
     
     }
 
-    public TreeNodeData find(TreeNodeData key){
-        TryFindRecord record = tryFind(key, null);
+    public T find(T key){
+        TryFindRecord<T> record = tryFind(key, null);
         if(record.found()) {
             return record.searchStoppedAtNode().getData();
         }
@@ -256,27 +256,27 @@ public class BSTree {
         return current;
     }
     
-    public TreeNodeData findMin() {
+    public T findMin() {
         if (root == null) {
             return null;
         }
-        BSTreeNode minNode = findMinimum(null);
+        BSTreeNode<T> minNode = findMinimum(null);
         return minNode != null ? minNode.getData() : null;
     }
     
-    public TreeNodeData findMax() {
+    public T findMax() {
         if (root == null) {
             return null;
         }
-        BSTreeNode maxNode = findMaximum(null);
+        BSTreeNode<T> maxNode = findMaximum(null);
         return maxNode != null ? maxNode.getData() : null;
     }
 
-    public void inorderTraversal(Predicate<TreeNodeData> action) {
+    public void inorderTraversal(Predicate<T> action) {
         inorderTraversal(root, action);
     }
 
-    protected void inorderTraversal(BSTreeNode node, Predicate<TreeNodeData> action) {
+    protected void inorderTraversal(BSTreeNode<T> node, Predicate<T> action) {
         if (node == null) {
             return;
         }
@@ -332,15 +332,15 @@ public class BSTree {
         return results;
     }
     
-    protected BSTreeNode createNode() {
-        return new BSTreeNode();
+    protected BSTreeNode<T> createNode() {
+        return new BSTreeNode<T>();
     }
     
     public int getHeight() {
         return getHeight(root);
     }
 
-    protected int getHeight(BSTreeNode startingAtNode) {
+    protected int getHeight(BSTreeNode<T> startingAtNode) {
         if (startingAtNode == null) {
             return -1;
         }
@@ -348,8 +348,8 @@ public class BSTree {
         int maxDepth = 0;
         int depth = 0;
 
-        BSTreeNode current = startingAtNode;
-        BSTreeNode previous = null;
+        BSTreeNode<T> current = startingAtNode;
+        BSTreeNode<T> previous = null;
 
         while (current != null) {
             if (previous == current.getParent()) {
@@ -402,7 +402,7 @@ public class BSTree {
         return root;
     }
     
-    protected void setRoot(BSTreeNode newRoot) {
+    protected void setRoot(BSTreeNode<T> newRoot) {
         this.root = newRoot;
     }
 

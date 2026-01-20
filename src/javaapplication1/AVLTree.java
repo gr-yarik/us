@@ -1,46 +1,46 @@
 package javaapplication1;
 
-public class AVLTree extends BSTree {
+public class AVLTree<T extends TreeNodeData> extends BSTree<T> {
     
     @Override
-    protected BSTreeNode createNode() {
-        return new AVLTreeNode();
+    protected BSTreeNode<T> createNode() {
+        return new AVLTreeNode<T>();
     }
     
     @Override
-    public void insert(TreeNodeData newData) {
-        AVLTreeNode newNode = (AVLTreeNode) super.insert(newData, null);
+    public void insert(T newData) {
+        AVLTreeNode<T> newNode = (AVLTreeNode<T>) super.insert(newData, null);
         if (newNode != null) {
             updateBalanceFactorsAndRebalance(newNode);
         }
     }
     
     @Override
-    public void delete(TreeNodeData data) {
+    public void delete(T data) {
         
-        TryFindRecord result = tryFind(data, null);
+        TryFindRecord<T> result = tryFind(data, null);
         
         if (!result.found()) {
             System.out.println("Didn't find a node with this key ");
             return;
         }
         
-        AVLTreeNode nodeToDelete = (AVLTreeNode) result.searchStoppedAtNode();
+        AVLTreeNode<T> nodeToDelete = (AVLTreeNode<T>) result.searchStoppedAtNode();
         deleteAVL(nodeToDelete);
     }
     
-    private void deleteAVL(AVLTreeNode nodeToDelete) {
+    private void deleteAVL(AVLTreeNode<T> nodeToDelete) {
         if (nodeToDelete == null) return;
         
         // Perform BST deletion
-        DeletionRecord result = deleteNode(nodeToDelete);
+        DeletionRecord<T> result = deleteNode(nodeToDelete);
         
         // If deletion didn't actually happen or root was deleted with no children
         if (result == null || result.side() == null && result.parentNode() == null) {
             return;
         }
         
-        AVLTreeNode parent = (AVLTreeNode) result.parentNode();
+        AVLTreeNode<T> parent = (AVLTreeNode<T>) result.parentNode();
         if (parent != null) {
             // Convert the side result to our internal ChildSide enum or boolean logic
             // Assuming DeletionRecord.side() returns something indicating LEFT or RIGHT
@@ -53,9 +53,9 @@ public class AVLTree extends BSTree {
     // INSERTION REBALANCING
     // =========================================================================
 
-    private void updateBalanceFactorsAndRebalance(AVLTreeNode node) {
-        AVLTreeNode current = node;
-        AVLTreeNode parent = (AVLTreeNode) current.getParent();
+    private void updateBalanceFactorsAndRebalance(AVLTreeNode<T> node) {
+        AVLTreeNode<T> current = node;
+        AVLTreeNode<T> parent = (AVLTreeNode<T>) current.getParent();
 
         while (parent != null) {
             // 1. Update Balance
@@ -78,7 +78,7 @@ public class AVLTree extends BSTree {
             if (Math.abs(parent.balance) == 1) {
                 // Continue up the tree
                 current = parent;
-                parent = (AVLTreeNode) current.getParent();
+                parent = (AVLTreeNode<T>) current.getParent();
                 continue;
             }
 
@@ -94,8 +94,8 @@ public class AVLTree extends BSTree {
     // DELETION REBALANCING
     // =========================================================================
 
-    private void updateBalanceFactorsAndRebalanceAfterDelete(AVLTreeNode startNode, ChildSide deletedSide) {
-        AVLTreeNode current = startNode;
+    private void updateBalanceFactorsAndRebalanceAfterDelete(AVLTreeNode<T> startNode, ChildSide deletedSide) {
+        AVLTreeNode<T> current = startNode;
         boolean isLeftSide = (deletedSide == ChildSide.LEFT);
 
         while (current != null) {
@@ -157,13 +157,13 @@ public class AVLTree extends BSTree {
     // ROTATION LOGIC (Corrected)
     // =========================================================================
 
-    private AVLTreeNode performRotation(AVLTreeNode N) {
+    private AVLTreeNode<T> performRotation(AVLTreeNode<T> N) {
         // N is the critical node (+/- 2)
-        AVLTreeNode newRoot = null;
+        AVLTreeNode<T> newRoot = null;
 
         // Left Heavy (-2)
         if (N.balance == -2) {
-            AVLTreeNode B = (AVLTreeNode) N.getLeftChild();
+            AVLTreeNode<T> B = (AVLTreeNode<T>) N.getLeftChild();
             
             // --- FIX START: Safety Check ---
             // If balance says -2 but Left child is missing, tree state is inconsistent.
@@ -173,16 +173,16 @@ public class AVLTree extends BSTree {
 
             // LL Case: B is Left Heavy (-1) or Balanced (0 - possible in delete)
             if (B.balance == -1 || B.balance == 0) {
-                newRoot = rotateRight(N);
+                newRoot = performRightRotation(N);
             } 
             // LR Case: B is Right Heavy (+1)
             else {
-                newRoot = rotateLeftRight(N);
+                newRoot = performLeftRightRotation(N);
             }
         }
         // Right Heavy (+2)
         else {
-            AVLTreeNode B = (AVLTreeNode) N.getRightChild();
+            AVLTreeNode<T> B = (AVLTreeNode<T>) N.getRightChild();
             
             // --- FIX START: Safety Check ---
             // This specifically fixes your NullPointerException.
@@ -192,11 +192,11 @@ public class AVLTree extends BSTree {
 
             // RR Case: B is Right Heavy (+1) or Balanced (0)
             if (B.balance == 1 || B.balance == 0) {
-                newRoot = rotateLeft(N);
+                newRoot = performLeftRotation(N);
             }
             // RL Case: B is Left Heavy (-1)
             else {
-                newRoot = rotateRightLeft(N);
+                newRoot = performRightLeftRotation(N);
             }
         }
         return newRoot;
@@ -205,10 +205,10 @@ public class AVLTree extends BSTree {
      * Single Right Rotation (LL)
      * Updates Parents strictly.
      */
-    private AVLTreeNode rotateRight(AVLTreeNode N) {
-        AVLTreeNode B = (AVLTreeNode) N.getLeftChild();
-        AVLTreeNode T2 = (AVLTreeNode) B.getRightChild();
-        AVLTreeNode P = (AVLTreeNode) N.getParent();
+    private AVLTreeNode<T> performRightRotation(AVLTreeNode<T> N) {
+        AVLTreeNode<T> B = (AVLTreeNode<T>) N.getLeftChild();
+        AVLTreeNode<T> T2 = (AVLTreeNode<T>) B.getRightChild();
+        AVLTreeNode<T> P = (AVLTreeNode<T>) N.getParent();
 
         // Rotate
         B.setRightChild(N);
@@ -243,10 +243,10 @@ public class AVLTree extends BSTree {
     /**
      * Single Left Rotation (RR)
      */
-    private AVLTreeNode rotateLeft(AVLTreeNode N) {
-        AVLTreeNode B = (AVLTreeNode) N.getRightChild();
-        AVLTreeNode T2 = (AVLTreeNode) B.getLeftChild();
-        AVLTreeNode P = (AVLTreeNode) N.getParent();
+    private AVLTreeNode<T> performLeftRotation(AVLTreeNode<T> N) {
+        AVLTreeNode<T> B = (AVLTreeNode<T>) N.getRightChild();
+        AVLTreeNode<T> T2 = (AVLTreeNode<T>) B.getLeftChild();
+        AVLTreeNode<T> P = (AVLTreeNode<T>) N.getParent();
 
         // Rotate
         B.setLeftChild(N);
@@ -281,19 +281,19 @@ public class AVLTree extends BSTree {
     /**
      * Double Left-Right Rotation (LR)
      */
-    private AVLTreeNode rotateLeftRight(AVLTreeNode N) {
-        AVLTreeNode B = (AVLTreeNode) N.getLeftChild();
-        AVLTreeNode F = (AVLTreeNode) B.getRightChild();
+    private AVLTreeNode<T> performLeftRightRotation(AVLTreeNode<T> N) {
+        AVLTreeNode<T> B = (AVLTreeNode<T>) N.getLeftChild();
+        AVLTreeNode<T> F = (AVLTreeNode<T>) B.getRightChild();
         int originalFBalance = F.balance;
 
         // 1. Rotate Left on Left Child (B)
         // Since rotateLeft updates parents, we don't need to manually link N->F yet,
         // but rotateLeft will return F.
-        rotateLeft(B); // B becomes child of F
+        super.rotateLeft(B); // B becomes child of F
 
         // 2. Rotate Right on Node (N)
         // F is now N.left. Rotate Right will make F the new root of this trio.
-        AVLTreeNode newRoot = rotateRight(N);
+        AVLTreeNode<T> newRoot = performRightRotation(N);
 
         // Balance Updates (Standard Logic from Document)
         if (originalFBalance == -1) {
@@ -314,16 +314,16 @@ public class AVLTree extends BSTree {
     /**
      * Double Right-Left Rotation (RL)
      */
-    private AVLTreeNode rotateRightLeft(AVLTreeNode N) {
-        AVLTreeNode B = (AVLTreeNode) N.getRightChild();
-        AVLTreeNode F = (AVLTreeNode) B.getLeftChild();
+    private AVLTreeNode<T> performRightLeftRotation(AVLTreeNode<T> N) {
+        AVLTreeNode<T> B = (AVLTreeNode<T>) N.getRightChild();
+        AVLTreeNode<T> F = (AVLTreeNode<T>) B.getLeftChild();
         int originalFBalance = F.balance;
 
         // 1. Rotate Right on Right Child (B)
-        rotateRight(B);
+        super.rotateRight(B);
 
         // 2. Rotate Left on Node (N)
-        AVLTreeNode newRoot = rotateLeft(N);
+        AVLTreeNode<T> newRoot = performLeftRotation(N);
 
         // Balance Updates
         if (originalFBalance == 1) {
@@ -351,7 +351,7 @@ public class AVLTree extends BSTree {
      */
     public boolean verifyAllBalanceFactors() {
         VerifyState state = new VerifyState();
-        verifyAndGetHeight((AVLTreeNode) getRoot(), state);
+        verifyAndGetHeight((AVLTreeNode<T>) getRoot(), state);
         return state.ok;
     }
 
@@ -362,7 +362,7 @@ public class AVLTree extends BSTree {
     /**
      * @return subtree height where null has height -1
      */
-    private int verifyAndGetHeight(AVLTreeNode node, VerifyState state) {
+    private int verifyAndGetHeight(AVLTreeNode<T> node, VerifyState state) {
         if (node == null) {
             return -1;
         }

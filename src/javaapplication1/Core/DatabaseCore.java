@@ -1,67 +1,826 @@
 package javaapplication1.Core;
 
+import javaapplication1.AVLTree;
+import javaapplication1.TreeNodeData;
+import UnsortedFile.BinaryFile;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.io.File;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+
 public class DatabaseCore {
+    
+    // ==================== Return Record Types ====================
+    
+    public record TestDetailRecord(PCRTest test, Person person) {}
+    
+    public record QueryResult(List<TestDetailRecord> results, int totalCount) {}
+    
+    public record SickPersonRecord(Person person, PCRTest causingTest) {}
+    
+    public record SickPersonQueryResult(List<SickPersonRecord> results, int totalCount) {}
+    
+    public record DistrictStatistic(int districtCode, int sickCount) {}
+    
+    public record RegionStatistic(int regionCode, int sickCount) {}
+    
+    // ==================== Member Variables ====================
 
-    // create variables for all 10 trees
-
-    // create two variables for BinaryFile (exists in the proejct)
-    // one for first main tree, with people, the other one with tests
-
-    // in the constructor, take names (path) to the files and a bool param
-    // that shows whether we want to start fresh (true) or restore state from these
-    // files (false)
-
-    // add a public method to close database which will call a saving to file method
-    // on a tree,
-    // passing it the coresponding path to file.
-
-    // create all public operations presented as functions with return values
-    // for where input like X is required, let the function take a parameter,
-    // which will be passed from outside, from gui (dont care about ui for now)
-    // also, remember this: During outputs of tests, system prints always also all
-    // data about person,
-    // to whom test was performed and during all outputs system prints also count of
-    // printed data.",
-    // so in function return values also include these details
-
-    // don't use shortened variable names. write full names in cammel case.
-    // for cases when function needs to return several types of data,
-    // create a record(){} for it
-
-    // create a child of /LinearHashing/Core/PCR.java to represent pcr with the
-    // following variables:
-    // • date and time of the test - long
-
-    // • unique patient number – string
-
-    // • unique random PCR test code – integer
-
-    // • unique code of the workplace that performed the PCR test – integer
-
-    // • district code – integer
-
-    // • region code – integer
-
-    // • test result – boolean
-
-    // • test value – double
-
-    // • note – string
-
-    // in overriden methods like write and read from bytes, put into bytestream the
-    // length of string,
-    // and then the bytes representing the string, so that when turning it from the
-    // bytes,
-    // read the length first and then the string bytes itslelf. do the same with
-    // pcrs
-
-    // create a new class (not child) but similar to Person.java class to have these
-    // member variables:
-    // • first name – string
-
-    // • last name – string
-
-    // • date of birth - long
-
-    // • unique patient number – string
+    // Master Trees (disk-persisted)
+    private AVLTree<Person> personMasterTree;
+    private AVLTree<PCRTest> testMasterTree;
+    
+    // Index Trees (RAM-only)
+    private AVLTree<PatientTimeKey> patientHistoryIndex;
+    private AVLTree<DistrictTimeKey> districtAllIndex;
+    private AVLTree<DistrictTimeKey> districtPositiveIndex;
+    private AVLTree<RegionTimeKey> regionAllIndex;
+    private AVLTree<RegionTimeKey> regionPositiveIndex;
+    private AVLTree<GlobalTimeKey> globalAllIndex;
+    private AVLTree<GlobalTimeKey> globalPositiveIndex;
+    private AVLTree<WorkplaceTimeKey> workplaceIndex;
+    
+    // Files
+    private BinaryFile personFile;
+    private BinaryFile testFile;
+    private String personFilePath;
+    private String testFilePath;
+    
+    // ==================== Constructor ====================
+    
+    public DatabaseCore(String personFilePath, String testFilePath, boolean cleanStart) {
+        this.personFilePath = personFilePath;
+        this.testFilePath = testFilePath;
+        
+        // Initialize all 10 AVL trees
+        this.personMasterTree = new AVLTree<>();
+        this.testMasterTree = new AVLTree<>();
+        this.patientHistoryIndex = new AVLTree<>();
+        this.districtAllIndex = new AVLTree<>();
+        this.districtPositiveIndex = new AVLTree<>();
+        this.regionAllIndex = new AVLTree<>();
+        this.regionPositiveIndex = new AVLTree<>();
+        this.globalAllIndex = new AVLTree<>();
+        this.globalPositiveIndex = new AVLTree<>();
+        this.workplaceIndex = new AVLTree<>();
+        
+        if (cleanStart) {
+            // Delete existing files if they exist
+            File personFileObj = new File(personFilePath);
+            File testFileObj = new File(testFilePath);
+            if (personFileObj.exists()) {
+                personFileObj.delete();
+            }
+            if (testFileObj.exists()) {
+                testFileObj.delete();
+            }
+        } else {
+            // Load data from files
+            loadFromFiles();
+        }
+    }
+    
+    private void loadFromFiles() {
+        File personFileObj = new File(personFilePath);
+        File testFileObj = new File(testFilePath);
+        
+        // Load persons from file
+        if (personFileObj.exists() && personFileObj.length() > 0) {
+            try {
+                personFile = new BinaryFile(personFilePath);
+                long fileSize = personFile.getSize();
+                personFile.seek(0);
+                
+                while (personFile.getSize() > 0) {
+                    try {
+                        // We need to know the size of each person record to read it
+                        // For now, we'll use a simple approach: read all bytes and parse
+                        byte[] allBytes = personFile.read((int)fileSize);
+                        
+                        // Parse persons from bytes
+                        // This is a simplified approach - in production, you'd want to store record sizes
+                        int offset = 0;
+                        while (offset < allBytes.length) {
+                            Person person = new Person();
+                            // We need to calculate how many bytes this person takes
+                            // Read from the array starting at offset
+                            byte[] personBytes = extractPersonBytes(allBytes, offset);
+                            if (personBytes.length == 0) break;
+                            
+                            person.FromByteArray(personBytes);
+                            personMasterTree.insert(person);
+                            offset += personBytes.length;
+                        }
+                        break;
+                    } catch (Exception e) {
+                        break;
+                    }
+                }
+                personFile.close();
+            } catch (Exception e) {
+                System.err.println("Error loading persons from file: " + e.getMessage());
+            }
+        }
+        
+        // Load tests from file and rebuild indexes
+        if (testFileObj.exists() && testFileObj.length() > 0) {
+            try {
+                testFile = new BinaryFile(testFilePath);
+                long fileSize = testFile.getSize();
+                testFile.seek(0);
+                
+                while (testFile.getSize() > 0) {
+                    try {
+                        byte[] allBytes = testFile.read((int)fileSize);
+                        
+                        int offset = 0;
+                        while (offset < allBytes.length) {
+                            PCRTest test = new PCRTest();
+                            byte[] testBytes = extractTestBytes(allBytes, offset);
+                            if (testBytes.length == 0) break;
+                            
+                            test.FromByteArray(testBytes);
+                            testMasterTree.insert(test);
+                            
+                            // Rebuild indexes
+                            insertTestIntoIndexes(test);
+                            
+                            offset += testBytes.length;
+                        }
+                        break;
+                    } catch (Exception e) {
+                        break;
+                    }
+                }
+                testFile.close();
+            } catch (Exception e) {
+                System.err.println("Error loading tests from file: " + e.getMessage());
+            }
+        }
+    }
+    
+    private byte[] extractPersonBytes(byte[] allBytes, int offset) {
+        // Since our serialization uses length-prefixed strings, we need to parse carefully
+        // This is a simplified approach - reads one complete person record
+        try {
+            ByteArrayInputStream bais = new ByteArrayInputStream(allBytes, offset, allBytes.length - offset);
+            DataInputStream dis = new DataInputStream(bais);
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(baos);
+            
+            // Read and write birthdate (8 bytes)
+            long birthdate = dis.readLong();
+            dos.writeLong(birthdate);
+            
+            // Read and write firstName
+            int firstNameLength = dis.readInt();
+            dos.writeInt(firstNameLength);
+            byte[] firstNameBytes = new byte[firstNameLength];
+            dis.readFully(firstNameBytes);
+            dos.write(firstNameBytes);
+            
+            // Read and write lastName
+            int lastNameLength = dis.readInt();
+            dos.writeInt(lastNameLength);
+            byte[] lastNameBytes = new byte[lastNameLength];
+            dis.readFully(lastNameBytes);
+            dos.write(lastNameBytes);
+            
+            // Read and write patientId
+            int patientIdLength = dis.readInt();
+            dos.writeInt(patientIdLength);
+            byte[] patientIdBytes = new byte[patientIdLength];
+            dis.readFully(patientIdBytes);
+            dos.write(patientIdBytes);
+            
+            return baos.toByteArray();
+        } catch (Exception e) {
+            return new byte[0];
+        }
+    }
+    
+    private byte[] extractTestBytes(byte[] allBytes, int offset) {
+        try {
+            ByteArrayInputStream bais = new ByteArrayInputStream(allBytes, offset, allBytes.length - offset);
+            DataInputStream dis = new DataInputStream(bais);
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(baos);
+            
+            // Read and write all primitive fields
+            int testCode = dis.readInt();
+            dos.writeInt(testCode);
+            
+            long timestamp = dis.readLong();
+            dos.writeLong(timestamp);
+            
+            int workplaceCode = dis.readInt();
+            dos.writeInt(workplaceCode);
+            
+            int districtCode = dis.readInt();
+            dos.writeInt(districtCode);
+            
+            int regionCode = dis.readInt();
+            dos.writeInt(regionCode);
+            
+            boolean testResult = dis.readBoolean();
+            dos.writeBoolean(testResult);
+            
+            double testValue = dis.readDouble();
+            dos.writeDouble(testValue);
+            
+            // Read and write patientId
+            int patientIdLength = dis.readInt();
+            dos.writeInt(patientIdLength);
+            byte[] patientIdBytes = new byte[patientIdLength];
+            dis.readFully(patientIdBytes);
+            dos.write(patientIdBytes);
+            
+            // Read and write note
+            int noteLength = dis.readInt();
+            dos.writeInt(noteLength);
+            byte[] noteBytes = new byte[noteLength];
+            dis.readFully(noteBytes);
+            dos.write(noteBytes);
+            
+            return baos.toByteArray();
+        } catch (Exception e) {
+            return new byte[0];
+        }
+    }
+    
+    // ==================== Close Database ====================
+    
+    public void closeDatabase() {
+        try {
+            // Save person master tree to file
+            ByteArrayOutputStream personStream = new ByteArrayOutputStream();
+            personMasterTree.inorderTraversal(person -> {
+                try {
+                    byte[] personBytes = person.ToByteArray();
+                    personStream.write(personBytes);
+                    return true;
+                } catch (Exception e) {
+                    System.err.println("Error serializing person: " + e.getMessage());
+                    return false;
+                }
+            });
+            
+            if (personStream.size() > 0) {
+                personFile = new BinaryFile(personFilePath);
+                personFile.seek(0);
+                personFile.write(personStream.toByteArray());
+                personFile.close();
+            }
+            
+            // Save test master tree to file
+            ByteArrayOutputStream testStream = new ByteArrayOutputStream();
+            testMasterTree.inorderTraversal(test -> {
+                try {
+                    byte[] testBytes = test.ToByteArray();
+                    testStream.write(testBytes);
+                    return true;
+                } catch (Exception e) {
+                    System.err.println("Error serializing test: " + e.getMessage());
+                    return false;
+                }
+            });
+            
+            if (testStream.size() > 0) {
+                testFile = new BinaryFile(testFilePath);
+                testFile.seek(0);
+                testFile.write(testStream.toByteArray());
+                testFile.close();
+            }
+        } catch (Exception e) {
+            System.err.println("Error closing database: " + e.getMessage());
+        }
+    }
+    
+    // ==================== Helper Methods ====================
+    
+    private void insertTestIntoIndexes(PCRTest test) {
+        // Insert into all 8 index trees
+        patientHistoryIndex.insert(new PatientTimeKey(test.patientId, test.timestamp, test.testCode, test));
+        districtAllIndex.insert(new DistrictTimeKey(test.districtCode, test.timestamp, test.testCode, test));
+        regionAllIndex.insert(new RegionTimeKey(test.regionCode, test.timestamp, test.testCode, test));
+        globalAllIndex.insert(new GlobalTimeKey(test.timestamp, test.testCode, test));
+        workplaceIndex.insert(new WorkplaceTimeKey(test.workplaceCode, test.timestamp, test.testCode, test));
+        
+        // Insert into positive-only indexes if test is positive
+        if (test.testResult) {
+            districtPositiveIndex.insert(new DistrictTimeKey(test.districtCode, test.timestamp, test.testCode, test));
+            regionPositiveIndex.insert(new RegionTimeKey(test.regionCode, test.timestamp, test.testCode, test));
+            globalPositiveIndex.insert(new GlobalTimeKey(test.timestamp, test.testCode, test));
+        }
+    }
+    
+    private void deleteTestFromIndexes(PCRTest test) {
+        // Delete from all 8 index trees
+        patientHistoryIndex.delete(new PatientTimeKey(test.patientId, test.timestamp, test.testCode, null));
+        districtAllIndex.delete(new DistrictTimeKey(test.districtCode, test.timestamp, test.testCode, null));
+        regionAllIndex.delete(new RegionTimeKey(test.regionCode, test.timestamp, test.testCode, null));
+        globalAllIndex.delete(new GlobalTimeKey(test.timestamp, test.testCode, null));
+        workplaceIndex.delete(new WorkplaceTimeKey(test.workplaceCode, test.timestamp, test.testCode, null));
+        
+        // Delete from positive-only indexes if test is positive
+        if (test.testResult) {
+            districtPositiveIndex.delete(new DistrictTimeKey(test.districtCode, test.timestamp, test.testCode, null));
+            regionPositiveIndex.delete(new RegionTimeKey(test.regionCode, test.timestamp, test.testCode, null));
+            globalPositiveIndex.delete(new GlobalTimeKey(test.timestamp, test.testCode, null));
+        }
+    }
+    
+    private <T extends TreeNodeData> List<T> findInRange(AVLTree<T> tree, T rangeStart, T rangeEnd) {
+        List<T> results = new ArrayList<>();
+        tree.inorderTraversal(item -> {
+            if (item.compare(rangeStart) >= 0 && item.compare(rangeEnd) <= 0) {
+                results.add(item);
+                return true;
+            } else if (item.compare(rangeEnd) > 0) {
+                return false; // Stop traversal
+            }
+            return true; // Continue traversal
+        });
+        return results;
+    }
+    
+    // ==================== Public Operations ====================
+    
+    // 1. Insert a PCR test result into the system.
+    public boolean insertPCRTest(PCRTest test) {
+        if (test == null) {
+            return false;
+        }
+        
+        // Check if person exists
+        Person searchPerson = new Person();
+        searchPerson.patientId = test.patientId;
+        Person person = personMasterTree.find(searchPerson);
+        if (person == null) {
+            return false; // Person must exist before inserting test
+        }
+        
+        // Insert into master tree
+        testMasterTree.insert(test);
+        
+        // Insert into all index trees
+        insertTestIntoIndexes(test);
+        
+        return true;
+    }
+    
+    // 2. Search for a test result (defined by the PCR test code) for a patient (defined by the unique patient number) and display all data.
+    public TestDetailRecord searchTestByCode(int testCode) {
+        PCRTest searchTest = new PCRTest();
+        searchTest.testCode = testCode;
+        PCRTest test = testMasterTree.find(searchTest);
+        
+        if (test == null) {
+            return null;
+        }
+        
+        Person searchPerson = new Person();
+        searchPerson.patientId = test.patientId;
+        Person person = personMasterTree.find(searchPerson);
+        
+        return new TestDetailRecord(test, person);
+    }
+    
+    // 3. List all PCR tests performed for a given patient (defined by the unique patient number), sorted by the date and time of performance.
+    public QueryResult listTestsForPatient(String patientId) {
+        List<TestDetailRecord> results = new ArrayList<>();
+        
+        // Create range boundaries
+        PatientTimeKey rangeStart = new PatientTimeKey(patientId, Long.MIN_VALUE, Integer.MIN_VALUE, null);
+        PatientTimeKey rangeEnd = new PatientTimeKey(patientId, Long.MAX_VALUE, Integer.MAX_VALUE, null);
+        
+        // Get all tests for this patient
+        List<PatientTimeKey> keys = findInRange(patientHistoryIndex, rangeStart, rangeEnd);
+        
+        // Get person data
+        Person searchPerson = new Person();
+        searchPerson.patientId = patientId;
+        Person person = personMasterTree.find(searchPerson);
+        
+        for (PatientTimeKey key : keys) {
+            results.add(new TestDetailRecord(key.getTest(), person));
+        }
+        
+        return new QueryResult(results, results.size());
+    }
+    
+    // 4. List all positive tests performed within a specified time period for a given district (defined by the district code).
+    public QueryResult listPositiveTestsInDistrictTimeRange(int districtCode, long startTime, long endTime) {
+        List<TestDetailRecord> results = new ArrayList<>();
+        
+        DistrictTimeKey rangeStart = new DistrictTimeKey(districtCode, startTime, Integer.MIN_VALUE, null);
+        DistrictTimeKey rangeEnd = new DistrictTimeKey(districtCode, endTime, Integer.MAX_VALUE, null);
+        
+        List<DistrictTimeKey> keys = findInRange(districtPositiveIndex, rangeStart, rangeEnd);
+        
+        for (DistrictTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            Person searchPerson = new Person();
+            searchPerson.patientId = test.patientId;
+            Person person = personMasterTree.find(searchPerson);
+            results.add(new TestDetailRecord(test, person));
+        }
+        
+        return new QueryResult(results, results.size());
+    }
+    
+    // 5. List all tests performed within a specified time period for a given district (defined by the district code).
+    public QueryResult listAllTestsInDistrictTimeRange(int districtCode, long startTime, long endTime) {
+        List<TestDetailRecord> results = new ArrayList<>();
+        
+        DistrictTimeKey rangeStart = new DistrictTimeKey(districtCode, startTime, Integer.MIN_VALUE, null);
+        DistrictTimeKey rangeEnd = new DistrictTimeKey(districtCode, endTime, Integer.MAX_VALUE, null);
+        
+        List<DistrictTimeKey> keys = findInRange(districtAllIndex, rangeStart, rangeEnd);
+        
+        for (DistrictTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            Person searchPerson = new Person();
+            searchPerson.patientId = test.patientId;
+            Person person = personMasterTree.find(searchPerson);
+            results.add(new TestDetailRecord(test, person));
+        }
+        
+        return new QueryResult(results, results.size());
+    }
+    
+    // 6. List all positive tests performed within a specified time period for a given region (defined by the region code).
+    public QueryResult listPositiveTestsInRegionTimeRange(int regionCode, long startTime, long endTime) {
+        List<TestDetailRecord> results = new ArrayList<>();
+        
+        RegionTimeKey rangeStart = new RegionTimeKey(regionCode, startTime, Integer.MIN_VALUE, null);
+        RegionTimeKey rangeEnd = new RegionTimeKey(regionCode, endTime, Integer.MAX_VALUE, null);
+        
+        List<RegionTimeKey> keys = findInRange(regionPositiveIndex, rangeStart, rangeEnd);
+        
+        for (RegionTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            Person searchPerson = new Person();
+            searchPerson.patientId = test.patientId;
+            Person person = personMasterTree.find(searchPerson);
+            results.add(new TestDetailRecord(test, person));
+        }
+        
+        return new QueryResult(results, results.size());
+    }
+    
+    // 7. List all tests performed within a specified time period for a given region (defined by the region code).
+    public QueryResult listAllTestsInRegionTimeRange(int regionCode, long startTime, long endTime) {
+        List<TestDetailRecord> results = new ArrayList<>();
+        
+        RegionTimeKey rangeStart = new RegionTimeKey(regionCode, startTime, Integer.MIN_VALUE, null);
+        RegionTimeKey rangeEnd = new RegionTimeKey(regionCode, endTime, Integer.MAX_VALUE, null);
+        
+        List<RegionTimeKey> keys = findInRange(regionAllIndex, rangeStart, rangeEnd);
+        
+        for (RegionTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            Person searchPerson = new Person();
+            searchPerson.patientId = test.patientId;
+            Person person = personMasterTree.find(searchPerson);
+            results.add(new TestDetailRecord(test, person));
+        }
+        
+        return new QueryResult(results, results.size());
+    }
+    
+    // 8. List all positive tests performed within a specified time period.
+    public QueryResult listAllPositiveTestsInTimeRange(long startTime, long endTime) {
+        List<TestDetailRecord> results = new ArrayList<>();
+        
+        GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
+        GlobalTimeKey rangeEnd = new GlobalTimeKey(endTime, Integer.MAX_VALUE, null);
+        
+        List<GlobalTimeKey> keys = findInRange(globalPositiveIndex, rangeStart, rangeEnd);
+        
+        for (GlobalTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            Person searchPerson = new Person();
+            searchPerson.patientId = test.patientId;
+            Person person = personMasterTree.find(searchPerson);
+            results.add(new TestDetailRecord(test, person));
+        }
+        
+        return new QueryResult(results, results.size());
+    }
+    
+    // 9. List all tests performed within a specified time period.
+    public QueryResult listAllTestsInTimeRange(long startTime, long endTime) {
+        List<TestDetailRecord> results = new ArrayList<>();
+        
+        GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
+        GlobalTimeKey rangeEnd = new GlobalTimeKey(endTime, Integer.MAX_VALUE, null);
+        
+        List<GlobalTimeKey> keys = findInRange(globalAllIndex, rangeStart, rangeEnd);
+        
+        for (GlobalTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            Person searchPerson = new Person();
+            searchPerson.patientId = test.patientId;
+            Person person = personMasterTree.find(searchPerson);
+            results.add(new TestDetailRecord(test, person));
+        }
+        
+        return new QueryResult(results, results.size());
+    }
+    
+    // 10. List sick persons in a district (defined by the district code) as of a given date, where a person is considered sick for X days after a positive test (X is provided by the user).
+    public SickPersonQueryResult listSickPersonsInDistrict(int districtCode, long asOfDate, int sicknessDurationDays) {
+        long sicknessDurationMillis = (long) sicknessDurationDays * 24 * 60 * 60 * 1000;
+        long startTime = asOfDate - sicknessDurationMillis;
+        
+        DistrictTimeKey rangeStart = new DistrictTimeKey(districtCode, startTime, Integer.MIN_VALUE, null);
+        DistrictTimeKey rangeEnd = new DistrictTimeKey(districtCode, asOfDate, Integer.MAX_VALUE, null);
+        
+        List<DistrictTimeKey> keys = findInRange(districtPositiveIndex, rangeStart, rangeEnd);
+        
+        // Group by patient and keep the latest positive test per person
+        Map<String, PCRTest> latestTestPerPerson = new HashMap<>();
+        for (DistrictTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            if (!latestTestPerPerson.containsKey(test.patientId) || 
+                test.timestamp > latestTestPerPerson.get(test.patientId).timestamp) {
+                latestTestPerPerson.put(test.patientId, test);
+            }
+        }
+        
+        List<SickPersonRecord> results = new ArrayList<>();
+        for (PCRTest test : latestTestPerPerson.values()) {
+            Person searchPerson = new Person();
+            searchPerson.patientId = test.patientId;
+            Person person = personMasterTree.find(searchPerson);
+            if (person != null) {
+                results.add(new SickPersonRecord(person, test));
+            }
+        }
+        
+        return new SickPersonQueryResult(results, results.size());
+    }
+    
+    // 11. List sick persons in a district (defined by the district code) as of a given date, where a person is considered sick for X days after a positive test (X is provided by the user), with sick persons sorted by the test value.
+    public SickPersonQueryResult listSickPersonsInDistrictSortedByTestValue(int districtCode, long asOfDate, int sicknessDurationDays) {
+        SickPersonQueryResult unsorted = listSickPersonsInDistrict(districtCode, asOfDate, sicknessDurationDays);
+        
+        List<SickPersonRecord> sorted = unsorted.results().stream()
+            .sorted((a, b) -> Double.compare(b.causingTest().testValue, a.causingTest().testValue))
+            .collect(Collectors.toList());
+        
+        return new SickPersonQueryResult(sorted, sorted.size());
+    }
+    
+    // 12. List sick persons in a region (defined by the region code) as of a given date, where a person is considered sick for X days after a positive test (X is provided by the user).
+    public SickPersonQueryResult listSickPersonsInRegion(int regionCode, long asOfDate, int sicknessDurationDays) {
+        long sicknessDurationMillis = (long) sicknessDurationDays * 24 * 60 * 60 * 1000;
+        long startTime = asOfDate - sicknessDurationMillis;
+        
+        RegionTimeKey rangeStart = new RegionTimeKey(regionCode, startTime, Integer.MIN_VALUE, null);
+        RegionTimeKey rangeEnd = new RegionTimeKey(regionCode, asOfDate, Integer.MAX_VALUE, null);
+        
+        List<RegionTimeKey> keys = findInRange(regionPositiveIndex, rangeStart, rangeEnd);
+        
+        Map<String, PCRTest> latestTestPerPerson = new HashMap<>();
+        for (RegionTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            if (!latestTestPerPerson.containsKey(test.patientId) || 
+                test.timestamp > latestTestPerPerson.get(test.patientId).timestamp) {
+                latestTestPerPerson.put(test.patientId, test);
+            }
+        }
+        
+        List<SickPersonRecord> results = new ArrayList<>();
+        for (PCRTest test : latestTestPerPerson.values()) {
+            Person searchPerson = new Person();
+            searchPerson.patientId = test.patientId;
+            Person person = personMasterTree.find(searchPerson);
+            if (person != null) {
+                results.add(new SickPersonRecord(person, test));
+            }
+        }
+        
+        return new SickPersonQueryResult(results, results.size());
+    }
+    
+    // 13. List sick persons as of a given date, where a person is considered sick for X days after a positive test (X is provided by the user).
+    public SickPersonQueryResult listAllSickPersons(long asOfDate, int sicknessDurationDays) {
+        long sicknessDurationMillis = (long) sicknessDurationDays * 24 * 60 * 60 * 1000;
+        long startTime = asOfDate - sicknessDurationMillis;
+        
+        GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
+        GlobalTimeKey rangeEnd = new GlobalTimeKey(asOfDate, Integer.MAX_VALUE, null);
+        
+        List<GlobalTimeKey> keys = findInRange(globalPositiveIndex, rangeStart, rangeEnd);
+        
+        Map<String, PCRTest> latestTestPerPerson = new HashMap<>();
+        for (GlobalTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            if (!latestTestPerPerson.containsKey(test.patientId) || 
+                test.timestamp > latestTestPerPerson.get(test.patientId).timestamp) {
+                latestTestPerPerson.put(test.patientId, test);
+            }
+        }
+        
+        List<SickPersonRecord> results = new ArrayList<>();
+        for (PCRTest test : latestTestPerPerson.values()) {
+            Person searchPerson = new Person();
+            searchPerson.patientId = test.patientId;
+            Person person = personMasterTree.find(searchPerson);
+            if (person != null) {
+                results.add(new SickPersonRecord(person, test));
+            }
+        }
+        
+        return new SickPersonQueryResult(results, results.size());
+    }
+    
+    // 14. List one sick person as of a given date from each district, where a person is considered sick for X days after a positive test (X is provided by the user), specifically the person with the highest test value.
+    public SickPersonQueryResult listSickestPersonPerDistrict(long asOfDate, int sicknessDurationDays) {
+        long sicknessDurationMillis = (long) sicknessDurationDays * 24 * 60 * 60 * 1000;
+        long startTime = asOfDate - sicknessDurationMillis;
+        
+        GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
+        GlobalTimeKey rangeEnd = new GlobalTimeKey(asOfDate, Integer.MAX_VALUE, null);
+        
+        List<GlobalTimeKey> keys = findInRange(globalPositiveIndex, rangeStart, rangeEnd);
+        
+        // Group by district, then by patient, keeping highest test value per district
+        Map<Integer, SickPersonRecord> sickestPerDistrict = new HashMap<>();
+        
+        for (GlobalTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            
+            if (!sickestPerDistrict.containsKey(test.districtCode) || 
+                test.testValue > sickestPerDistrict.get(test.districtCode).causingTest().testValue) {
+                
+                Person searchPerson = new Person();
+                searchPerson.patientId = test.patientId;
+                Person person = personMasterTree.find(searchPerson);
+                
+                if (person != null) {
+                    sickestPerDistrict.put(test.districtCode, new SickPersonRecord(person, test));
+                }
+            }
+        }
+        
+        List<SickPersonRecord> results = new ArrayList<>(sickestPerDistrict.values());
+        return new SickPersonQueryResult(results, results.size());
+    }
+    
+    // 15. List districts sorted by the number of sick persons as of a given date, where a person is considered sick for X days after a positive test (X is provided by the user).
+    public List<DistrictStatistic> listDistrictsSortedBySickCount(long asOfDate, int sicknessDurationDays) {
+        long sicknessDurationMillis = (long) sicknessDurationDays * 24 * 60 * 60 * 1000;
+        long startTime = asOfDate - sicknessDurationMillis;
+        
+        GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
+        GlobalTimeKey rangeEnd = new GlobalTimeKey(asOfDate, Integer.MAX_VALUE, null);
+        
+        List<GlobalTimeKey> keys = findInRange(globalPositiveIndex, rangeStart, rangeEnd);
+        
+        // Group by district and count unique patients
+        Map<Integer, Map<String, PCRTest>> sickPerDistrict = new HashMap<>();
+        
+        for (GlobalTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            sickPerDistrict.putIfAbsent(test.districtCode, new HashMap<>());
+            
+            Map<String, PCRTest> patientsInDistrict = sickPerDistrict.get(test.districtCode);
+            if (!patientsInDistrict.containsKey(test.patientId) || 
+                test.timestamp > patientsInDistrict.get(test.patientId).timestamp) {
+                patientsInDistrict.put(test.patientId, test);
+            }
+        }
+        
+        List<DistrictStatistic> results = sickPerDistrict.entrySet().stream()
+            .map(entry -> new DistrictStatistic(entry.getKey(), entry.getValue().size()))
+            .sorted((a, b) -> Integer.compare(b.sickCount(), a.sickCount()))
+            .collect(Collectors.toList());
+        
+        return results;
+    }
+    
+    // 16. List regions sorted by the number of sick persons as of a given date, where a person is considered sick for X days after a positive test (X is provided by the user).
+    public List<RegionStatistic> listRegionsSortedBySickCount(long asOfDate, int sicknessDurationDays) {
+        long sicknessDurationMillis = (long) sicknessDurationDays * 24 * 60 * 60 * 1000;
+        long startTime = asOfDate - sicknessDurationMillis;
+        
+        GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
+        GlobalTimeKey rangeEnd = new GlobalTimeKey(asOfDate, Integer.MAX_VALUE, null);
+        
+        List<GlobalTimeKey> keys = findInRange(globalPositiveIndex, rangeStart, rangeEnd);
+        
+        // Group by region and count unique patients
+        Map<Integer, Map<String, PCRTest>> sickPerRegion = new HashMap<>();
+        
+        for (GlobalTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            sickPerRegion.putIfAbsent(test.regionCode, new HashMap<>());
+            
+            Map<String, PCRTest> patientsInRegion = sickPerRegion.get(test.regionCode);
+            if (!patientsInRegion.containsKey(test.patientId) || 
+                test.timestamp > patientsInRegion.get(test.patientId).timestamp) {
+                patientsInRegion.put(test.patientId, test);
+            }
+        }
+        
+        List<RegionStatistic> results = sickPerRegion.entrySet().stream()
+            .map(entry -> new RegionStatistic(entry.getKey(), entry.getValue().size()))
+            .sorted((a, b) -> Integer.compare(b.sickCount(), a.sickCount()))
+            .collect(Collectors.toList());
+        
+        return results;
+    }
+    
+    // 17. List all tests performed within a specified time period at a given workplace (defined by the workplace code).
+    public QueryResult listAllTestsAtWorkplaceInTimeRange(int workplaceCode, long startTime, long endTime) {
+        List<TestDetailRecord> results = new ArrayList<>();
+        
+        WorkplaceTimeKey rangeStart = new WorkplaceTimeKey(workplaceCode, startTime, Integer.MIN_VALUE, null);
+        WorkplaceTimeKey rangeEnd = new WorkplaceTimeKey(workplaceCode, endTime, Integer.MAX_VALUE, null);
+        
+        List<WorkplaceTimeKey> keys = findInRange(workplaceIndex, rangeStart, rangeEnd);
+        
+        for (WorkplaceTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            Person searchPerson = new Person();
+            searchPerson.patientId = test.patientId;
+            Person person = personMasterTree.find(searchPerson);
+            results.add(new TestDetailRecord(test, person));
+        }
+        
+        return new QueryResult(results, results.size());
+    }
+    
+    // 18. Search for a PCR test by its code.
+    public TestDetailRecord searchPCRTestByCode(int testCode) {
+        return searchTestByCode(testCode);
+    }
+    
+    // 19. Insert a person into the system.
+    public boolean insertPerson(Person person) {
+        if (person == null) {
+            return false;
+        }
+        
+        personMasterTree.insert(person);
+        return true;
+    }
+    
+    // 20. Permanently and irreversibly delete a PCR test result (e.g., after incorrect insertion); the test is defined by its code.
+    public boolean deletePCRTest(int testCode) {
+        PCRTest searchTest = new PCRTest();
+        searchTest.testCode = testCode;
+        PCRTest test = testMasterTree.find(searchTest);
+        
+        if (test == null) {
+            return false;
+        }
+        
+        // Delete from master tree
+        testMasterTree.delete(test);
+        
+        // Delete from all index trees
+        deleteTestFromIndexes(test);
+        
+        return true;
+    }
+    
+    // 21. Delete a person from the system (defined by the unique patient number), including all of their PCR test results.
+    public boolean deletePerson(String patientId) {
+        Person searchPerson = new Person();
+        searchPerson.patientId = patientId;
+        Person person = personMasterTree.find(searchPerson);
+        
+        if (person == null) {
+            return false;
+        }
+        
+        // Find and delete all tests for this person
+        PatientTimeKey rangeStart = new PatientTimeKey(patientId, Long.MIN_VALUE, Integer.MIN_VALUE, null);
+        PatientTimeKey rangeEnd = new PatientTimeKey(patientId, Long.MAX_VALUE, Integer.MAX_VALUE, null);
+        
+        List<PatientTimeKey> keys = findInRange(patientHistoryIndex, rangeStart, rangeEnd);
+        
+        for (PatientTimeKey key : keys) {
+            PCRTest test = key.getTest();
+            testMasterTree.delete(test);
+            deleteTestFromIndexes(test);
+        }
+        
+        // Delete the person
+        personMasterTree.delete(person);
+        
+        return true;
+    }
 }

@@ -5,65 +5,37 @@ import java.util.Queue;
 
 import javaapplication1.BSTree.ChildSide;
 
-public class AVLTreeNode extends BSTreeNode {
+public class AVLTreeNode<T extends TreeNodeData> extends BSTreeNode<T> {
     
     byte balance = 0;
     
     @Override
-    public AVLTreeNode getLeftChild() {
-        return (AVLTreeNode) super.getLeftChild();
+    public AVLTreeNode<T> getLeftChild() {
+        return (AVLTreeNode<T>) super.getLeftChild();
     }
     
     @Override
-    public AVLTreeNode getRightChild() {
-        return (AVLTreeNode) super.getRightChild();
+    public AVLTreeNode<T> getRightChild() {
+        return (AVLTreeNode<T>) super.getRightChild();
     }
     
     @Override
-    public AVLTreeNode getParent() {
-        return (AVLTreeNode) super.getParent();
+    public AVLTreeNode<T> getParent() {
+        return (AVLTreeNode<T>) super.getParent();
     }
     
-    public void setLeftChild(AVLTreeNode leftChild) {
+    public void setLeftChild(AVLTreeNode<T> leftChild) {
         super.setLeftChild(leftChild);
     }
     
-    public void setRightChild(AVLTreeNode rightChild) {
+    public void setRightChild(AVLTreeNode<T> rightChild) {
         super.setRightChild(rightChild);
     }
     
-    public void setParent(AVLTreeNode parent) {
+    public void setParent(AVLTreeNode<T> parent) {
         super.setParent(parent);
     }
 
-    
-    private int getHeightIterative(AVLTreeNode node) {
-        if (node == null) {
-            return -1;
-        }
-        
-        Queue<AVLTreeNode> queue = new LinkedList<>();
-        queue.offer(node);
-        int height = -1;
-        
-        while (!queue.isEmpty()) {
-            int levelSize = queue.size();
-            height++;
-            
-            for (int i = 0; i < levelSize; i++) {
-                AVLTreeNode current = queue.poll();
-                
-                if (current.getLeftChild() != null) {
-                    queue.offer(current.getLeftChild());
-                }
-                if (current.getRightChild() != null) {
-                    queue.offer(current.getRightChild());
-                }
-            }
-        }
-        
-        return height;
-    }
     
     public boolean isBalanced() {
         return Math.abs(balance) <= 1;
@@ -75,37 +47,5 @@ public class AVLTreeNode extends BSTreeNode {
     
     public boolean isRightHeavy() {
         return balance > 0;
-    }
-    
-    public void updateBalanceFactor() {
-        int leftHeight = getHeightIterative(getLeftChild());
-        int rightHeight = getHeightIterative(getRightChild());
-        balance = (byte) (rightHeight - leftHeight);
-    }
-    
-    public boolean updateBalanceFactorIncremental(ChildSide side) {
-        byte oldBF = balance;
-        
-        if (side == BSTree.ChildSide.LEFT) {
-            balance--;
-        } else {
-            balance++;
-        }
-        
-        return (oldBF == 0 && Math.abs(balance) == 1) || 
-               (Math.abs(oldBF) == 1 && Math.abs(balance) == 2);
-    }
-    
-    public boolean updateBalanceFactorDecremental(BSTree.ChildSide side) {
-        byte oldBF = balance;
-        
-        if (side == BSTree.ChildSide.LEFT) {
-            balance++;
-        } else {
-            balance--;
-        }
-        
-        return (oldBF == 0 && Math.abs(balance) == 1) || 
-               (Math.abs(oldBF) == 1 && balance == 0);
     }
 }

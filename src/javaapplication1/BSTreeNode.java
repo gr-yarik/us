@@ -1,42 +1,42 @@
 package javaapplication1;
 
-public class BSTreeNode {
+public class BSTreeNode<T extends TreeNodeData> {
 
-    private BSTreeNode leftChild;
-    private BSTreeNode rightChild;
-    private BSTreeNode parent;
+    private BSTreeNode<T> leftChild;
+    private BSTreeNode<T> rightChild;
+    private BSTreeNode<T> parent;
 
-    private TreeNodeData data;
+    private T data;
     
-    public BSTreeNode getLeftChild() {
+    public BSTreeNode<T> getLeftChild() {
         return leftChild;
     }
     
-    public BSTreeNode getRightChild() {
+    public BSTreeNode<T> getRightChild() {
         return rightChild;
     }
     
-    public BSTreeNode getParent() {
+    public BSTreeNode<T> getParent() {
         return parent;
     }
     
-    public TreeNodeData getData() {
+    public T getData() {
         return data;
     }
     
-    public void setLeftChild(BSTreeNode leftChild) {
+    public void setLeftChild(BSTreeNode<T> leftChild) {
         this.leftChild = leftChild;
     }
     
-    public void setRightChild(BSTreeNode rightChild) {
+    public void setRightChild(BSTreeNode<T> rightChild) {
         this.rightChild = rightChild;
     }
     
-    public void setParent(BSTreeNode parent) {
+    public void setParent(BSTreeNode<T> parent) {
         this.parent = parent;
     }
     
-    public void setData(TreeNodeData data) {
+    public void setData(T data) {
         this.data = data;
     }
 }
