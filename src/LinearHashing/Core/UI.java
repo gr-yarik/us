@@ -14,6 +14,8 @@ import java.util.Random;
 
 import LinearHashing.*;
 import UnsortedFile.Heap;
+import UnsortedFile.BlockManager;
+import java.util.Collections;
 
 public class UI extends JFrame {
     
@@ -926,12 +928,50 @@ public class UI extends JFrame {
     }
     
     private void displayAllPersonOverflows() {
+        
+        
         StringBuilder sb = new StringBuilder();
-        sb.append("ALL PERSON OVERFLOW BLOCKS\n");
-        sb.append("==========================\n\n");
+        
+        
+        
+        try {
+            LinearHash<Person> personFile = controller.getDatabaseCore().getPersonFile();
+            BucketHeap<Person> bucketHeap = personFile.getBucketHeap();
+            Heap<Person> overflowHeap = bucketHeap.getOverflowHeap();
+            BlockManager overflowBlockManager = overflowHeap.getBlockManager();
+            
+            if (overflowBlockManager != null) {
+              
+                java.util.List<Integer> emptyBlocks = overflowBlockManager.getEmptyBlocks();
+                java.util.List<Integer> partiallyEmptyBlocks = overflowBlockManager.getPartiallyEmptyBlocks();
+                Collections.sort(emptyBlocks);
+                Collections.sort(partiallyEmptyBlocks);
+                
+                sb.append("Empty Blocks (").append(emptyBlocks.size()).append("): ");
+                if (emptyBlocks.isEmpty()) {
+                    sb.append("none");
+                } else {
+                    sb.append(emptyBlocks.toString());
+                }
+                sb.append("\n");
+                
+                // sb.append("Partially Empty Blocks (").append(partiallyEmptyBlocks.size()).append("): ");
+                // if (partiallyEmptyBlocks.isEmpty()) {
+                //     sb.append("none");
+                // } else {
+                //     sb.append(partiallyEmptyBlocks.toString());
+                // }
+                // sb.append("\n");
+            }
+        } catch (Exception e) { }
+        
+        // sb.append("ALL PERSON OVERFLOW BLOCKS\n");
+        // sb.append("==========================\n\n");
         for (OverflowInfo<Person> info : personOverflowInfos) {
             appendPersonOverflowDetails(sb, info);
         }
+        
+        
         personsOverflowDetailsArea.setText(sb.toString());
         personsOverflowDetailsArea.setCaretPosition(0);
     }
@@ -948,12 +988,50 @@ public class UI extends JFrame {
     }
     
     private void displayAllPCROverflows() {
+        
+        
         StringBuilder sb = new StringBuilder();
-        sb.append("ALL PCR INDEX OVERFLOW BLOCKS\n");
-        sb.append("=============================\n\n");
+        
+        
+        
+        try {
+            LinearHash<PCRIndex> indexFile = controller.getDatabaseCore().getIndexFile();
+            BucketHeap<PCRIndex> bucketHeap = indexFile.getBucketHeap();
+            Heap<PCRIndex> overflowHeap = bucketHeap.getOverflowHeap();
+            BlockManager overflowBlockManager = overflowHeap.getBlockManager();
+            
+            if (overflowBlockManager != null) {
+              
+                java.util.List<Integer> emptyBlocks = overflowBlockManager.getEmptyBlocks();
+                java.util.List<Integer> partiallyEmptyBlocks = overflowBlockManager.getPartiallyEmptyBlocks();
+                Collections.sort(emptyBlocks);
+                Collections.sort(partiallyEmptyBlocks);
+                
+                sb.append("Empty Blocks (").append(emptyBlocks.size()).append("): ");
+                if (emptyBlocks.isEmpty()) {
+                    sb.append("none");
+                } else {
+                    sb.append(emptyBlocks.toString());
+                }
+                sb.append("\n");
+                
+                // sb.append("Partially Empty Blocks (").append(partiallyEmptyBlocks.size()).append("): ");
+                // if (partiallyEmptyBlocks.isEmpty()) {
+                //     sb.append("none");
+                // } else {
+                //     sb.append(partiallyEmptyBlocks.toString());
+                // }
+                // sb.append("\n");
+            }
+        } catch (Exception e) { }
+        
+        // sb.append("ALL PCR INDEX OVERFLOW BLOCKS\n");
+        // sb.append("=============================\n\n");
         for (OverflowInfo<PCRIndex> info : pcrOverflowInfos) {
             appendPCROverflowDetails(sb, info);
         }
+        
+        
         pcrOverflowDetailsArea.setText(sb.toString());
         pcrOverflowDetailsArea.setCaretPosition(0);
     }

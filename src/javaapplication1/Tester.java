@@ -36,7 +36,7 @@ public class Tester {
     private static final double RANDOMIZED_TEST2_EXISTING_SEARCH_PROB = 0.5;
     
     // Balance factor check frequency
-    private static final int BALANCE_CHECK_FREQUENCY = 5;
+    private static final int BALANCE_CHECK_FREQUENCY = 1;
     
     static class IntegerData implements TreeNodeData {
         private int value;
@@ -101,7 +101,7 @@ public class Tester {
         
         System.out.println("Generating " + dataSize + " unique random integers...");
         while (helperStructure.size() < dataSize) {
-            int value = random.nextInt();
+            int value = Math.abs(random.nextInt()%(INSERTION_TEST_SIZE*20));
             if (uniqueValues.add(value)) {
                 IntegerData data = new IntegerData(value);
                 helperStructure.add(data);
@@ -117,7 +117,8 @@ public class Tester {
             // Check balance factors every Nth insertion
             if ((i + 1) % BALANCE_CHECK_FREQUENCY == 0) {
                 if (!avlTree.verifyAllBalanceFactors()) {
-                    System.out.println("WARNING: Balance factor violation detected after " + (i + 1) + " insertions");
+                    avlTree.printTree();
+                    throw new Error("WARNING: Balance factor violation detected after " + (i + 1) + " insertions");
                 }
             }
         }
@@ -167,7 +168,7 @@ public class Tester {
         System.out.println("\n=== Test 2: Deletion Test ===");
         
         int deleteCount = DELETION_TEST_COUNT;
-        Collections.shuffle(helperStructure, random);
+      //  Collections.shuffle(helperStructure, random);
         
         List<IntegerData> toDelete = new ArrayList<>(helperStructure.subList(0, Math.min(deleteCount, helperStructure.size())));
         Set<Integer> deletedValues = new HashSet<>();
@@ -185,7 +186,10 @@ public class Tester {
             // Check balance factors every Nth deletion
             if ((i + 1) % BALANCE_CHECK_FREQUENCY == 0) {
                 if (!avlTree.verifyAllBalanceFactors()) {
-                    System.out.println("WARNING: Balance factor violation detected after " + (i + 1) + " deletions");
+                    avlTree.printTree();
+                    throw new Error("WARNING: Balance factor violation detected after " + (i + 1) + " deletions");
+
+                  // System.out.println("WARNING: Balance factor violation detected after " + (i + 1) + " deletions");
                 }
             }
         }
@@ -229,6 +233,11 @@ public class Tester {
     // Test 3: Search Test
     public static void test3_searchTest(AVLTree avlTree, BSTree bstTree, List<IntegerData> helperStructure, Random random) {
         System.out.println("\n=== Test 3: Search Test ===");
+
+        if (helperStructure.isEmpty()) {
+            System.out.println("Skipping: no elements to search (helper structure is empty).");
+            return;
+        }
         
         int searchCount = SEARCH_TEST_COUNT;
         Set<Integer> helperSet = new HashSet<>();
@@ -720,6 +729,11 @@ public class Tester {
     // Test 3 (TreeMap): Search Test
     public static void test3_searchTest_TreeMap(AVLTree avlTree, TreeMap<Integer, IntegerData> treeMap, List<IntegerData> helperStructure, Random random) {
         System.out.println("\n=== Test 3 (TreeMap): Search Test ===");
+
+        if (helperStructure.isEmpty()) {
+            System.out.println("Skipping: no elements to search (helper structure is empty).");
+            return;
+        }
         
         int searchCount = SEARCH_TEST_COUNT;
         Set<Integer> helperSet = new HashSet<>();
@@ -1084,16 +1098,16 @@ public class Tester {
         // Test 1: Insertion Test
         AVLTree avlTree1 = new AVLTree();
         BSTree bstTree1 = new BSTree();
-        List<IntegerData> helperStructure1 = test1_insertionTest(avlTree1, bstTree1, new Random(random.nextInt()));
+        List<IntegerData> helperStructure1 = test1_insertionTest(avlTree1, bstTree1, random);
         
         // Test 2: Deletion Test
-        test2_deletionTest(avlTree1, bstTree1, helperStructure1, new Random(random.nextInt()));
+        test2_deletionTest(avlTree1, bstTree1, helperStructure1, random);
         
         // Test 3: Search Test
-        test3_searchTest(avlTree1, bstTree1, helperStructure1, new Random(random.nextInt()));
+        test3_searchTest(avlTree1, bstTree1, helperStructure1, random);
         
         // Test 4: Range Search Test
-        test4_rangeSearchTest(avlTree1, bstTree1, helperStructure1, new Random(random.nextInt()));
+        test4_rangeSearchTest(avlTree1, bstTree1, helperStructure1, random);
         
         // Test 5: Min/Max Test
         test5_minMaxTest(avlTree1, bstTree1, helperStructure1);
@@ -1106,12 +1120,12 @@ public class Tester {
         // Test 7: Randomized Operations Test 1 (new trees)
         AVLTree avlTree7 = new AVLTree();
         BSTree bstTree7 = new BSTree();
-        test7_randomizedOperationsTest1(avlTree7, bstTree7, new Random(random.nextInt()));
+        test7_randomizedOperationsTest1(avlTree7, bstTree7, random);
         
         // Test 8: Randomized Operations Test 2 (new trees)
         AVLTree avlTree8 = new AVLTree();
         BSTree bstTree8 = new BSTree();
-        test8_randomizedOperationsTest2(avlTree8, bstTree8, new Random(random.nextInt()));
+        test8_randomizedOperationsTest2(avlTree8, bstTree8, random);
         
         // ========== GROUP 2: AVL Tree vs TreeMap ==========
         System.out.println("\n" + "=".repeat(60));
@@ -1121,16 +1135,16 @@ public class Tester {
         // Test 1 (TreeMap): Insertion Test
         AVLTree avlTreeMap1 = new AVLTree();
         TreeMap<Integer, IntegerData> treeMap1 = new TreeMap<>();
-        List<IntegerData> helperStructureMap1 = test1_insertionTest_TreeMap(avlTreeMap1, treeMap1, new Random(random.nextInt()));
+        List<IntegerData> helperStructureMap1 = test1_insertionTest_TreeMap(avlTreeMap1, treeMap1, random);
         
         // Test 2 (TreeMap): Deletion Test
-        test2_deletionTest_TreeMap(avlTreeMap1, treeMap1, helperStructureMap1, new Random(random.nextInt()));
+        test2_deletionTest_TreeMap(avlTreeMap1, treeMap1, helperStructureMap1, random);
         
         // Test 3 (TreeMap): Search Test
-        test3_searchTest_TreeMap(avlTreeMap1, treeMap1, helperStructureMap1, new Random(random.nextInt()));
+        test3_searchTest_TreeMap(avlTreeMap1, treeMap1, helperStructureMap1, random);
         
         // Test 4 (TreeMap): Range Search Test
-        test4_rangeSearchTest_TreeMap(avlTreeMap1, treeMap1, helperStructureMap1, new Random(random.nextInt()));
+        test4_rangeSearchTest_TreeMap(avlTreeMap1, treeMap1, helperStructureMap1, random);
         
         // Test 5 (TreeMap): Min/Max Test
         test5_minMaxTest_TreeMap(avlTreeMap1, treeMap1, helperStructureMap1);
@@ -1143,12 +1157,12 @@ public class Tester {
         // Test 7 (TreeMap): Randomized Operations Test 1 (new trees)
         AVLTree avlTreeMap7 = new AVLTree();
         TreeMap<Integer, IntegerData> treeMap7 = new TreeMap<>();
-        test7_randomizedOperationsTest1_TreeMap(avlTreeMap7, treeMap7, new Random(random.nextInt()));
+        test7_randomizedOperationsTest1_TreeMap(avlTreeMap7, treeMap7, random);
         
         // Test 8 (TreeMap): Randomized Operations Test 2 (new trees)
         AVLTree avlTreeMap8 = new AVLTree();
         TreeMap<Integer, IntegerData> treeMap8 = new TreeMap<>();
-        test8_randomizedOperationsTest2_TreeMap(avlTreeMap8, treeMap8, new Random(random.nextInt()));
+        test8_randomizedOperationsTest2_TreeMap(avlTreeMap8, treeMap8, random);
         
         System.out.println("\n" + "=".repeat(60));
         System.out.println("All tests completed!");

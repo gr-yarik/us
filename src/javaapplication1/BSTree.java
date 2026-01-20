@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.io.ByteArrayOutputStream;
+import UnsortedFile.BinaryFile;
+import UnsortedFile.StorableRecord;
 
 public class BSTree {
 
@@ -314,14 +317,14 @@ public class BSTree {
         TryFindRecord searchResult = tryFind(minKey, null);
         BSTreeNode startNode = searchResult.searchStoppedAtNode();
 
-        inorderTraversal(startNode, data -> {
-            if (data.compare(minKey) < 0) {
+        inorderTraversal(startNode, nodeData -> {
+            if (nodeData.compare(minKey) < 0) {
                 return true; 
             } 
-            if(data.compare(maxKey) > 0) {
+            if(nodeData.compare(maxKey) > 0) {
                 return false;
             }
-            results.add(data);
+            results.add(nodeData);
             return true;
             
         });
@@ -336,7 +339,6 @@ public class BSTree {
     public int getHeight() {
         return getHeight(root);
     }
-    
 
     protected int getHeight(BSTreeNode startingAtNode) {
         if (startingAtNode == null) {
@@ -456,7 +458,7 @@ public class BSTree {
 
             int width = Math.max(line1.length(), merged.get(2).length());
             padLinesToWidth(merged, width);
-            return new AsciiBox(merged, width, merged.size(), (left.width + label.length()) / 2);
+            return new AsciiBox(merged, width, merged.size(), left.width + label.length() / 2);
         }
 
         if (left.width == 0) {
@@ -532,5 +534,38 @@ public class BSTree {
         return new String(arr);
     }
     
+    public void saveToFile(String filePath) {
+        if (root == null) {
+            throw new IllegalStateException("Cannot save an empty tree");
+        }
+        
+        try {
+            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+            
+            inorderTraversal(nodeData -> {
+                try {
+                    byte[] recordBytes = nodeData.ToByteArray();
+                    byteStream.write(recordBytes);
+                    
+                    return true;
+                } catch (Exception e) {
+                    throw new RuntimeException("Error serializing tree node", e);
+                }
+            });
+            
+            byte[] allBytes = byteStream.toByteArray();
+            
+            BinaryFile binaryFile = new BinaryFile(filePath);
+            try {
+                binaryFile.seek(0);
+                binaryFile.write(allBytes);
+            } finally {
+                binaryFile.close();
+            }
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Error saving tree to file: " + filePath, e);
+        }
+    }
    
 }

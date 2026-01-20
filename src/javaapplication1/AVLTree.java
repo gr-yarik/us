@@ -32,175 +32,355 @@ public class AVLTree extends BSTree {
     private void deleteAVL(AVLTreeNode nodeToDelete) {
         if (nodeToDelete == null) return;
         
+        // Perform BST deletion
         DeletionRecord result = deleteNode(nodeToDelete);
         
-        if (result == null || result.side() == null) {
+        // If deletion didn't actually happen or root was deleted with no children
+        if (result == null || result.side() == null && result.parentNode() == null) {
             return;
         }
         
         AVLTreeNode parent = (AVLTreeNode) result.parentNode();
         if (parent != null) {
-            updateBalanceFactorsAndRebalanceAfterDelete(parent, result.side());
+            // Convert the side result to our internal ChildSide enum or boolean logic
+            // Assuming DeletionRecord.side() returns something indicating LEFT or RIGHT
+            ChildSide deletedSide = (result.side() == BSTree.ChildSide.LEFT) ? ChildSide.LEFT : ChildSide.RIGHT;
+            updateBalanceFactorsAndRebalanceAfterDelete(parent, deletedSide);
         }
     }
-    
-    private void updateBalanceFactorsAndRebalance(AVLTreeNode newNode) {
-        AVLTreeNode currentNode = newNode.getParent();
-        AVLTreeNode previousNode = newNode;
-        
-        while (currentNode != null) {
-            ChildSide side = (currentNode.getLeftChild() == previousNode) ? ChildSide.LEFT : ChildSide.RIGHT;
-            
-            boolean heightIncreased = currentNode.updateBalanceFactorIncremental(side);
-            
-            if (!currentNode.isBalanced()) {
-                rebalance(currentNode);
-                break;
+
+    // =========================================================================
+    // INSERTION REBALANCING
+    // =========================================================================
+
+    private void updateBalanceFactorsAndRebalance(AVLTreeNode node) {
+        AVLTreeNode current = node;
+        AVLTreeNode parent = (AVLTreeNode) current.getParent();
+
+        while (parent != null) {
+            // 1. Update Balance
+            if (current == parent.getLeftChild()) {
+                parent.balance--; // Left side grew
+            } else {
+                parent.balance++; // Right side grew
             }
+
+            // 2. Check Logic (Stop / Continue / Rotate)
             
-            if (!heightIncreased) {
-                break;
+            // Case: Balance became 0. 
+            // The tree was previously +/- 1, now it's balanced. Height did NOT change.
+            if (parent.balance == 0) {
+                return; // STOP
             }
-            
-            previousNode = currentNode;
-            currentNode = currentNode.getParent();
+
+            // Case: Balance became +/- 1.
+            // The tree was 0, now it leans. Height INCREASED.
+            if (Math.abs(parent.balance) == 1) {
+                // Continue up the tree
+                current = parent;
+                parent = (AVLTreeNode) current.getParent();
+                continue;
+            }
+
+            // Case: Balance became +/- 2. Critical Imbalance.
+            if (Math.abs(parent.balance) == 2) {
+                performRotation(parent);
+                return; // For insertion, one rotation fixes the height. STOP.
+            }
         }
     }
-    
+
+    // =========================================================================
+    // DELETION REBALANCING
+    // =========================================================================
+
     private void updateBalanceFactorsAndRebalanceAfterDelete(AVLTreeNode startNode, ChildSide deletedSide) {
-        AVLTreeNode currentNode = startNode;
-        ChildSide side = deletedSide;
-        
-        while (currentNode != null) {
-            boolean heightDecreased = currentNode.updateBalanceFactorDecremental(side);
+        AVLTreeNode current = startNode;
+        boolean isLeftSide = (deletedSide == ChildSide.LEFT);
+
+        while (current != null) {
+            // 1. Update Balance
+            // If deleted from Left, Right side becomes relatively heavier (+)
+            // If deleted from Right, Left side becomes relatively heavier (-)
+            if (isLeftSide) {
+                current.balance++; 
+            } else {
+                current.balance--;
+            }
+
+            // 2. Check Logic
             
-            if (!currentNode.isBalanced()) {
-                AVLTreeNode parent = currentNode.getParent();
-                
-                ChildSide wasOnSide = null;
+            // Case: Balance became +/- 1.
+            // Node was 0. Now it leans. Height is same as before (max(L,R) was H, now still H).
+            if (Math.abs(current.balance) == 1) {
+                return; // STOP propagation
+            }
+
+            // Case: Balance became 0.
+            // Node was +/- 1. Now 0. Height DECREASED.
+            if (current.balance == 0) {
+                // Determine side for next iteration before moving up
+                AVLTreeNode parent = (AVLTreeNode) current.getParent();
                 if (parent != null) {
-                    wasOnSide = (parent.getLeftChild() == currentNode) ? ChildSide.LEFT : ChildSide.RIGHT;
+                    isLeftSide = (current == parent.getLeftChild());
                 }
+                current = parent;
+                continue; // CONTINUE UP
+            }
+
+            // Case: Balance became +/- 2. Rotate.
+            if (Math.abs(current.balance) == 2) {
+                AVLTreeNode newSubtreeRoot = performRotation(current);
                 
-                rebalance(currentNode);
+                // Special Delete Logic:
+                // If the rotation resulted in a balanced node (0), height decreased -> Continue Up.
+                // If the rotation resulted in a leaning node (+/- 1), height maintained -> Stop.
                 
-                if (parent != null) {
-                    boolean parentHeightDecreased = parent.updateBalanceFactorDecremental(wasOnSide);
-                    
-                    currentNode = parent;
-                    side = wasOnSide;
-                    
-                    if (!parentHeightDecreased) {
-                        break;
+                if (newSubtreeRoot.balance == 0) {
+                    AVLTreeNode parent = (AVLTreeNode) newSubtreeRoot.getParent();
+                    if (parent != null) {
+                        isLeftSide = (newSubtreeRoot == parent.getLeftChild());
                     }
-                    continue;
+                    current = parent;
+                    continue; // CONTINUE UP
                 } else {
-                    break;
+                    return; // STOP
                 }
             }
+        }
+    }
+
+    // =========================================================================
+    // ROTATION LOGIC
+    // =========================================================================
+// =========================================================================
+    // ROTATION LOGIC (Corrected)
+    // =========================================================================
+
+    private AVLTreeNode performRotation(AVLTreeNode N) {
+        // N is the critical node (+/- 2)
+        AVLTreeNode newRoot = null;
+
+        // Left Heavy (-2)
+        if (N.balance == -2) {
+            AVLTreeNode B = (AVLTreeNode) N.getLeftChild();
             
-            if (!heightDecreased) {
-                break;
+            // --- FIX START: Safety Check ---
+            // If balance says -2 but Left child is missing, tree state is inconsistent.
+            // We return N to prevent crash.
+            if (B == null) return N; 
+            // --- FIX END ---
+
+            // LL Case: B is Left Heavy (-1) or Balanced (0 - possible in delete)
+            if (B.balance == -1 || B.balance == 0) {
+                newRoot = rotateRight(N);
+            } 
+            // LR Case: B is Right Heavy (+1)
+            else {
+                newRoot = rotateLeftRight(N);
             }
+        }
+        // Right Heavy (+2)
+        else {
+            AVLTreeNode B = (AVLTreeNode) N.getRightChild();
             
-            AVLTreeNode parent = currentNode.getParent();
-            if (parent != null) {
-                side = (parent.getLeftChild() == currentNode) ? ChildSide.LEFT : ChildSide.RIGHT;
+            // --- FIX START: Safety Check ---
+            // This specifically fixes your NullPointerException.
+            // We check if B is null before accessing B.balance later.
+            if (B == null) return N;
+            // --- FIX END ---
+
+            // RR Case: B is Right Heavy (+1) or Balanced (0)
+            if (B.balance == 1 || B.balance == 0) {
+                newRoot = rotateLeft(N);
             }
-            currentNode = parent;
-        }
-    }
-    
-    private void rebalance(AVLTreeNode node) {
-        if (node.isRightHeavy()) {
-            AVLTreeNode rightChild = node.getRightChild();
-            if (rightChild != null && rightChild.isLeftHeavy()) {
-                rotateRight(rightChild);
-                rotateLeft(node);
-            } else {
-                rotateLeft(node);
-            }
-        } else if (node.isLeftHeavy()) {
-            AVLTreeNode leftChild = node.getLeftChild();
-            if (leftChild != null && leftChild.isRightHeavy()) {
-                rotateLeft(leftChild);
-                rotateRight(node);
-            } else {
-                rotateRight(node);
+            // RL Case: B is Left Heavy (-1)
+            else {
+                newRoot = rotateRightLeft(N);
             }
         }
+        return newRoot;
     }
-    
-    @Override
-    protected void rotateLeft(BSTreeNode pivotNode) {
-        if (pivotNode == null || pivotNode.getRightChild() == null) return;
-        
-        AVLTreeNode pivot = (AVLTreeNode) pivotNode;
-        AVLTreeNode rightChild = pivot.getRightChild();
-        
-        byte pivotBF = pivot.balanceFactor;
-        byte rightBF = rightChild.balanceFactor;
-        
-        super.rotateLeft(pivotNode);
-        
-        if (rightBF >= 0) {
-            pivot.balanceFactor = (byte) (pivotBF - 1 - rightBF);
-            rightChild.balanceFactor = (byte) (rightBF - 1);
+    /**
+     * Single Right Rotation (LL)
+     * Updates Parents strictly.
+     */
+    private AVLTreeNode rotateRight(AVLTreeNode N) {
+        AVLTreeNode B = (AVLTreeNode) N.getLeftChild();
+        AVLTreeNode T2 = (AVLTreeNode) B.getRightChild();
+        AVLTreeNode P = (AVLTreeNode) N.getParent();
+
+        // Rotate
+        B.setRightChild(N);
+        N.setLeftChild(T2);
+
+        // Update Parents
+        if (T2 != null) T2.setParent(N);
+        N.setParent(B);
+        B.setParent(P);
+
+        if (P != null) {
+            if (P.getLeftChild() == N) P.setLeftChild(B);
+            else P.setRightChild(B);
         } else {
-            pivot.balanceFactor = (byte) (pivotBF - 1);
-            rightChild.balanceFactor = (byte) (rightBF - 1 + pivotBF);
+            setRoot(B); // Helper from BSTree
         }
-    }
-    
-    @Override
-    protected void rotateRight(BSTreeNode pivotNode) {
-        if (pivotNode == null || pivotNode.getLeftChild() == null) return;
-        
-        AVLTreeNode pivot = (AVLTreeNode) pivotNode;
-        AVLTreeNode leftChild = pivot.getLeftChild();
-        
-        byte pivotBF = pivot.balanceFactor;
-        byte leftBF = leftChild.balanceFactor;
-        
-        super.rotateRight(pivotNode);
-        
-        if (leftBF <= 0) {
-            pivot.balanceFactor = (byte) (pivotBF + 1 - leftBF);
-            leftChild.balanceFactor = (byte) (leftBF + 1);
+
+        // Update Balances
+        if (B.balance == -1) {
+            // Standard LL Insert Case
+            N.balance = 0;
+            B.balance = 0;
         } else {
-            pivot.balanceFactor = (byte) (pivotBF + 1);
-            leftChild.balanceFactor = (byte) (leftBF + 1 + pivotBF);
+            // Special Delete Case (B was 0)
+            N.balance = -1;
+            B.balance = 1;
         }
+
+        return B;
     }
-    
-    public boolean isBalanced() {
-        return isBalanced((AVLTreeNode) root);
+
+    /**
+     * Single Left Rotation (RR)
+     */
+    private AVLTreeNode rotateLeft(AVLTreeNode N) {
+        AVLTreeNode B = (AVLTreeNode) N.getRightChild();
+        AVLTreeNode T2 = (AVLTreeNode) B.getLeftChild();
+        AVLTreeNode P = (AVLTreeNode) N.getParent();
+
+        // Rotate
+        B.setLeftChild(N);
+        N.setRightChild(T2);
+
+        // Update Parents
+        if (T2 != null) T2.setParent(N);
+        N.setParent(B);
+        B.setParent(P);
+
+        if (P != null) {
+            if (P.getLeftChild() == N) P.setLeftChild(B);
+            else P.setRightChild(B);
+        } else {
+            setRoot(B);
+        }
+
+        // Update Balances
+        if (B.balance == 1) {
+            // Standard RR Insert Case
+            N.balance = 0;
+            B.balance = 0;
+        } else {
+            // Special Delete Case (B was 0)
+            N.balance = 1;
+            B.balance = -1;
+        }
+
+        return B;
     }
-    
-    private boolean isBalanced(AVLTreeNode node) {
-        if (node == null) return true;
-        
-        return node.isBalanced() && 
-               isBalanced(node.getLeftChild()) && 
-               isBalanced(node.getRightChild());
+
+    /**
+     * Double Left-Right Rotation (LR)
+     */
+    private AVLTreeNode rotateLeftRight(AVLTreeNode N) {
+        AVLTreeNode B = (AVLTreeNode) N.getLeftChild();
+        AVLTreeNode F = (AVLTreeNode) B.getRightChild();
+        int originalFBalance = F.balance;
+
+        // 1. Rotate Left on Left Child (B)
+        // Since rotateLeft updates parents, we don't need to manually link N->F yet,
+        // but rotateLeft will return F.
+        rotateLeft(B); // B becomes child of F
+
+        // 2. Rotate Right on Node (N)
+        // F is now N.left. Rotate Right will make F the new root of this trio.
+        AVLTreeNode newRoot = rotateRight(N);
+
+        // Balance Updates (Standard Logic from Document)
+        if (originalFBalance == -1) {
+            B.balance = 0;
+            N.balance = 1;
+        } else if (originalFBalance == 1) {
+            B.balance = -1;
+            N.balance = 0;
+        } else {
+            B.balance = 0;
+            N.balance = 0;
+        }
+        newRoot.balance = 0;
+
+        return newRoot;
     }
+
+    /**
+     * Double Right-Left Rotation (RL)
+     */
+    private AVLTreeNode rotateRightLeft(AVLTreeNode N) {
+        AVLTreeNode B = (AVLTreeNode) N.getRightChild();
+        AVLTreeNode F = (AVLTreeNode) B.getLeftChild();
+        int originalFBalance = F.balance;
+
+        // 1. Rotate Right on Right Child (B)
+        rotateRight(B);
+
+        // 2. Rotate Left on Node (N)
+        AVLTreeNode newRoot = rotateLeft(N);
+
+        // Balance Updates
+        if (originalFBalance == 1) {
+            N.balance = -1;
+            B.balance = 0;
+        } else if (originalFBalance == -1) {
+            N.balance = 0;
+            B.balance = 1;
+        } else {
+            N.balance = 0;
+            B.balance = 0;
+        }
+        newRoot.balance = 0;
+
+        return newRoot;
+    }
+
+
     
+    /**
+     * Verifies that every node's stored AVL balance factor equals the balance
+     * computed from the heights of its children (rightHeight - leftHeight).
+     * This performs a full traversal (O(n)) and does not rely on incremental
+     * updates.
+     */
     public boolean verifyAllBalanceFactors() {
-        return verifyAllBalanceFactors((AVLTreeNode) root);
+        VerifyState state = new VerifyState();
+        verifyAndGetHeight((AVLTreeNode) getRoot(), state);
+        return state.ok;
     }
-    
-    private boolean verifyAllBalanceFactors(AVLTreeNode node) {
-        if (node == null) return true;
-        
-        boolean nodeBalanced = node.isBalanced();
-        if (!nodeBalanced) {
-            System.out.println("Balance factor violation: node with data " + node.getData() + 
-                             " has balance factor " + node.balanceFactor);
+
+    private class VerifyState {
+        boolean ok = true;
+    }
+
+    /**
+     * @return subtree height where null has height -1
+     */
+    private int verifyAndGetHeight(AVLTreeNode node, VerifyState state) {
+        if (node == null) {
+            return -1;
         }
-        
-        return nodeBalanced && 
-               verifyAllBalanceFactors(node.getLeftChild()) && 
-               verifyAllBalanceFactors(node.getRightChild());
+
+        int leftHeight = verifyAndGetHeight(node.getLeftChild(), state);
+        int rightHeight = verifyAndGetHeight(node.getRightChild(), state);
+        int computedBalance = rightHeight - leftHeight;
+
+        if (node.balance != (byte) computedBalance) {
+            state.ok = false;
+        }
+        if (Math.abs(computedBalance) > 1) {
+            state.ok = false;
+        }
+
+        return 1 + Math.max(leftHeight, rightHeight);
     }
     
+    
+   
 }

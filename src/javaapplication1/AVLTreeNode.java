@@ -3,9 +3,11 @@ package javaapplication1;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import javaapplication1.BSTree.ChildSide;
+
 public class AVLTreeNode extends BSTreeNode {
     
-    byte balanceFactor = 0;
+    byte balance = 0;
     
     @Override
     public AVLTreeNode getLeftChild() {
@@ -64,46 +66,46 @@ public class AVLTreeNode extends BSTreeNode {
     }
     
     public boolean isBalanced() {
-        return Math.abs(balanceFactor) <= 1;
+        return Math.abs(balance) <= 1;
     }
     
     public boolean isLeftHeavy() {
-        return balanceFactor < 0;
+        return balance < 0;
     }
     
     public boolean isRightHeavy() {
-        return balanceFactor > 0;
+        return balance > 0;
     }
     
     public void updateBalanceFactor() {
         int leftHeight = getHeightIterative(getLeftChild());
         int rightHeight = getHeightIterative(getRightChild());
-        balanceFactor = (byte) (rightHeight - leftHeight);
+        balance = (byte) (rightHeight - leftHeight);
     }
     
-    public boolean updateBalanceFactorIncremental(BSTree.ChildSide side) {
-        byte oldBF = balanceFactor;
+    public boolean updateBalanceFactorIncremental(ChildSide side) {
+        byte oldBF = balance;
         
         if (side == BSTree.ChildSide.LEFT) {
-            balanceFactor--;
+            balance--;
         } else {
-            balanceFactor++;
+            balance++;
         }
         
-        return (oldBF == 0 && Math.abs(balanceFactor) == 1) || 
-               (Math.abs(oldBF) == 1 && Math.abs(balanceFactor) == 2);
+        return (oldBF == 0 && Math.abs(balance) == 1) || 
+               (Math.abs(oldBF) == 1 && Math.abs(balance) == 2);
     }
     
     public boolean updateBalanceFactorDecremental(BSTree.ChildSide side) {
-        byte oldBF = balanceFactor;
+        byte oldBF = balance;
         
         if (side == BSTree.ChildSide.LEFT) {
-            balanceFactor++;
+            balance++;
         } else {
-            balanceFactor--;
+            balance--;
         }
         
-        return (oldBF == 0 && Math.abs(balanceFactor) == 1) || 
-               (Math.abs(oldBF) == 1 && balanceFactor == 0);
+        return (oldBF == 0 && Math.abs(balance) == 1) || 
+               (Math.abs(oldBF) == 1 && balance == 0);
     }
 }
