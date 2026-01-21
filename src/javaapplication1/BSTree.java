@@ -281,7 +281,7 @@ public class BSTree<T extends TreeNodeData> {
             return;
         }
 
-        BSTreeNode current = findMinimum(node);
+        BSTreeNode<T> current = findMinimum(node);
         
         while (current != null) {
             boolean shouldContinue = action.test(current.getData());
@@ -295,7 +295,7 @@ public class BSTree<T extends TreeNodeData> {
                     current = current.getLeftChild();
                 }
             } else {
-                BSTreeNode parent = current.getParent();
+                BSTreeNode<T> parent = current.getParent();
                 
                 while (parent != null && current == parent.getRightChild()) {
                     current = parent;
@@ -307,25 +307,24 @@ public class BSTree<T extends TreeNodeData> {
         }
     }
     
-    public List<TreeNodeData> findInRange(TreeNodeData minKey, TreeNodeData maxKey) {
-        List<TreeNodeData> results = new ArrayList<>();
+    public List<T> findInRange(T minKey, T maxKey) {
+        List<T> results = new ArrayList<>();
 
         if (root == null) {
             return results;
         }
 
-        TryFindRecord searchResult = tryFind(minKey, null);
-        BSTreeNode startNode = searchResult.searchStoppedAtNode();
+        TryFindRecord<T> searchResult = tryFind(minKey, null);
+        BSTreeNode<T> startNode = searchResult.searchStoppedAtNode();
 
-        inorderTraversal(startNode, nodeData -> {
-            if (nodeData.compare(minKey) < 0) {
-                return true; 
-            } 
-            if(nodeData.compare(maxKey) > 0) {
-                return false;
+        inorderTraversal(startNode, item -> {
+            if (item.compare(minKey) >= 0 && item.compare(maxKey) <= 0) {
+                results.add(item);
+                return true;
+            } else if (item.compare(maxKey) > 0) {
+                return false; // Stop traversal
             }
-            results.add(nodeData);
-            return true;
+            return true; // Continue traversal
             
         });
 
@@ -533,39 +532,4 @@ public class BSTree<T extends TreeNodeData> {
         Arrays.fill(arr, ch);
         return new String(arr);
     }
-    
-    public void saveToFile(String filePath) {
-        if (root == null) {
-            throw new IllegalStateException("Cannot save an empty tree");
-        }
-        
-        try {
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            
-            inorderTraversal(nodeData -> {
-                try {
-                    byte[] recordBytes = nodeData.ToByteArray();
-                    byteStream.write(recordBytes);
-                    
-                    return true;
-                } catch (Exception e) {
-                    throw new RuntimeException("Error serializing tree node", e);
-                }
-            });
-            
-            byte[] allBytes = byteStream.toByteArray();
-            
-            BinaryFile binaryFile = new BinaryFile(filePath);
-            try {
-                binaryFile.seek(0);
-                binaryFile.write(allBytes);
-            } finally {
-                binaryFile.close();
-            }
-            
-        } catch (Exception e) {
-            throw new RuntimeException("Error saving tree to file: " + filePath, e);
-        }
-    }
-   
 }

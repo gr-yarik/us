@@ -1,7 +1,6 @@
 package javaapplication1.Core;
 
 import javaapplication1.AVLTree;
-import javaapplication1.TreeNodeData;
 import UnsortedFile.BinaryFile;
 import java.util.List;
 import java.util.ArrayList;
@@ -32,7 +31,7 @@ public class DatabaseCore {
     
     // ==================== Member Variables ====================
 
-    // Master Trees (disk-persisted)
+    // Master Trees (savable to files)
     private AVLTree<Person> personMasterTree;
     private AVLTree<PCRTest> testMasterTree;
     
@@ -45,6 +44,7 @@ public class DatabaseCore {
     private AVLTree<GlobalTimeKey> globalAllIndex;
     private AVLTree<GlobalTimeKey> globalPositiveIndex;
     private AVLTree<WorkplaceTimeKey> workplaceIndex;
+    private AVLTree<PatientTestCodeKey> patientTestCodeIndex; // Optimization for operation #2
     
     // Files
     private BinaryFile personFile;
@@ -58,7 +58,7 @@ public class DatabaseCore {
         this.personFilePath = personFilePath;
         this.testFilePath = testFilePath;
         
-        // Initialize all 10 AVL trees
+        // Initialize all 11 AVL trees (2 master + 9 indexes)
         this.personMasterTree = new AVLTree<>();
         this.testMasterTree = new AVLTree<>();
         this.patientHistoryIndex = new AVLTree<>();
@@ -69,6 +69,7 @@ public class DatabaseCore {
         this.globalAllIndex = new AVLTree<>();
         this.globalPositiveIndex = new AVLTree<>();
         this.workplaceIndex = new AVLTree<>();
+        this.patientTestCodeIndex = new AVLTree<>();
         
         if (cleanStart) {
             // Delete existing files if they exist
@@ -307,12 +308,22 @@ public class DatabaseCore {
     // ==================== Helper Methods ====================
     
     private void insertTestIntoIndexes(PCRTest test) {
-        // Insert into all 8 index trees
+        // Get the person object for the optimized index
+        Person searchPerson = new Person();
+        searchPerson.patientId = test.patientId;
+        Person person = personMasterTree.find(searchPerson);
+        
+        // Insert into all 9 index trees
         patientHistoryIndex.insert(new PatientTimeKey(test.patientId, test.timestamp, test.testCode, test));
         districtAllIndex.insert(new DistrictTimeKey(test.districtCode, test.timestamp, test.testCode, test));
         regionAllIndex.insert(new RegionTimeKey(test.regionCode, test.timestamp, test.testCode, test));
         globalAllIndex.insert(new GlobalTimeKey(test.timestamp, test.testCode, test));
         workplaceIndex.insert(new WorkplaceTimeKey(test.workplaceCode, test.timestamp, test.testCode, test));
+        
+        // Insert into optimized search index (operation #2)
+        if (person != null) {
+            patientTestCodeIndex.insert(new PatientTestCodeKey(test.patientId, test.testCode, test, person));
+        }
         
         // Insert into positive-only indexes if test is positive
         if (test.testResult) {
@@ -323,12 +334,15 @@ public class DatabaseCore {
     }
     
     private void deleteTestFromIndexes(PCRTest test) {
-        // Delete from all 8 index trees
+        // Delete from all 9 index trees
         patientHistoryIndex.delete(new PatientTimeKey(test.patientId, test.timestamp, test.testCode, null));
         districtAllIndex.delete(new DistrictTimeKey(test.districtCode, test.timestamp, test.testCode, null));
         regionAllIndex.delete(new RegionTimeKey(test.regionCode, test.timestamp, test.testCode, null));
         globalAllIndex.delete(new GlobalTimeKey(test.timestamp, test.testCode, null));
         workplaceIndex.delete(new WorkplaceTimeKey(test.workplaceCode, test.timestamp, test.testCode, null));
+        
+        // Delete from optimized search index (operation #2)
+        patientTestCodeIndex.delete(new PatientTestCodeKey(test.patientId, test.testCode, null, null));
         
         // Delete from positive-only indexes if test is positive
         if (test.testResult) {
@@ -336,20 +350,6 @@ public class DatabaseCore {
             regionPositiveIndex.delete(new RegionTimeKey(test.regionCode, test.timestamp, test.testCode, null));
             globalPositiveIndex.delete(new GlobalTimeKey(test.timestamp, test.testCode, null));
         }
-    }
-    
-    private <T extends TreeNodeData> List<T> findInRange(AVLTree<T> tree, T rangeStart, T rangeEnd) {
-        List<T> results = new ArrayList<>();
-        tree.inorderTraversal(item -> {
-            if (item.compare(rangeStart) >= 0 && item.compare(rangeEnd) <= 0) {
-                results.add(item);
-                return true;
-            } else if (item.compare(rangeEnd) > 0) {
-                return false; // Stop traversal
-            }
-            return true; // Continue traversal
-        });
-        return results;
     }
     
     // ==================== Public Operations ====================
@@ -378,20 +378,18 @@ public class DatabaseCore {
     }
     
     // 2. Search for a test result (defined by the PCR test code) for a patient (defined by the unique patient number) and display all data.
-    public TestDetailRecord searchTestByCode(int testCode) {
-        PCRTest searchTest = new PCRTest();
-        searchTest.testCode = testCode;
-        PCRTest test = testMasterTree.find(searchTest);
+    // OPTIMIZED: Uses PatientTestCodeIndex for O(log n) instead of O(log n + log m)
+    public TestDetailRecord searchTestByCode(int testCode, String patientId) {
+        // Use the optimized index - single tree lookup with both test and person references
+        PatientTestCodeKey searchKey = new PatientTestCodeKey(patientId, testCode, null, null);
+        PatientTestCodeKey result = patientTestCodeIndex.find(searchKey);
         
-        if (test == null) {
-            return null;
+        if (result == null) {
+            return null; // Test not found or doesn't belong to specified patient
         }
         
-        Person searchPerson = new Person();
-        searchPerson.patientId = test.patientId;
-        Person person = personMasterTree.find(searchPerson);
-        
-        return new TestDetailRecord(test, person);
+        // Return the cached test and person from the index
+        return new TestDetailRecord(result.getTest(), result.getPerson());
     }
     
     // 3. List all PCR tests performed for a given patient (defined by the unique patient number), sorted by the date and time of performance.
@@ -403,7 +401,7 @@ public class DatabaseCore {
         PatientTimeKey rangeEnd = new PatientTimeKey(patientId, Long.MAX_VALUE, Integer.MAX_VALUE, null);
         
         // Get all tests for this patient
-        List<PatientTimeKey> keys = findInRange(patientHistoryIndex, rangeStart, rangeEnd);
+        List<PatientTimeKey> keys = patientHistoryIndex.findInRange(rangeStart, rangeEnd);
         
         // Get person data
         Person searchPerson = new Person();
@@ -424,7 +422,7 @@ public class DatabaseCore {
         DistrictTimeKey rangeStart = new DistrictTimeKey(districtCode, startTime, Integer.MIN_VALUE, null);
         DistrictTimeKey rangeEnd = new DistrictTimeKey(districtCode, endTime, Integer.MAX_VALUE, null);
         
-        List<DistrictTimeKey> keys = findInRange(districtPositiveIndex, rangeStart, rangeEnd);
+        List<DistrictTimeKey> keys = districtPositiveIndex.findInRange(rangeStart, rangeEnd);
         
         for (DistrictTimeKey key : keys) {
             PCRTest test = key.getTest();
@@ -444,7 +442,7 @@ public class DatabaseCore {
         DistrictTimeKey rangeStart = new DistrictTimeKey(districtCode, startTime, Integer.MIN_VALUE, null);
         DistrictTimeKey rangeEnd = new DistrictTimeKey(districtCode, endTime, Integer.MAX_VALUE, null);
         
-        List<DistrictTimeKey> keys = findInRange(districtAllIndex, rangeStart, rangeEnd);
+        List<DistrictTimeKey> keys = districtAllIndex.findInRange(rangeStart, rangeEnd);
         
         for (DistrictTimeKey key : keys) {
             PCRTest test = key.getTest();
@@ -464,7 +462,7 @@ public class DatabaseCore {
         RegionTimeKey rangeStart = new RegionTimeKey(regionCode, startTime, Integer.MIN_VALUE, null);
         RegionTimeKey rangeEnd = new RegionTimeKey(regionCode, endTime, Integer.MAX_VALUE, null);
         
-        List<RegionTimeKey> keys = findInRange(regionPositiveIndex, rangeStart, rangeEnd);
+        List<RegionTimeKey> keys = regionPositiveIndex.findInRange(rangeStart, rangeEnd);
         
         for (RegionTimeKey key : keys) {
             PCRTest test = key.getTest();
@@ -484,7 +482,7 @@ public class DatabaseCore {
         RegionTimeKey rangeStart = new RegionTimeKey(regionCode, startTime, Integer.MIN_VALUE, null);
         RegionTimeKey rangeEnd = new RegionTimeKey(regionCode, endTime, Integer.MAX_VALUE, null);
         
-        List<RegionTimeKey> keys = findInRange(regionAllIndex, rangeStart, rangeEnd);
+        List<RegionTimeKey> keys = regionAllIndex.findInRange(rangeStart, rangeEnd);
         
         for (RegionTimeKey key : keys) {
             PCRTest test = key.getTest();
@@ -504,7 +502,7 @@ public class DatabaseCore {
         GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
         GlobalTimeKey rangeEnd = new GlobalTimeKey(endTime, Integer.MAX_VALUE, null);
         
-        List<GlobalTimeKey> keys = findInRange(globalPositiveIndex, rangeStart, rangeEnd);
+        List<GlobalTimeKey> keys = globalPositiveIndex.findInRange(rangeStart, rangeEnd);
         
         for (GlobalTimeKey key : keys) {
             PCRTest test = key.getTest();
@@ -524,7 +522,7 @@ public class DatabaseCore {
         GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
         GlobalTimeKey rangeEnd = new GlobalTimeKey(endTime, Integer.MAX_VALUE, null);
         
-        List<GlobalTimeKey> keys = findInRange(globalAllIndex, rangeStart, rangeEnd);
+        List<GlobalTimeKey> keys = globalAllIndex.findInRange(rangeStart, rangeEnd);
         
         for (GlobalTimeKey key : keys) {
             PCRTest test = key.getTest();
@@ -545,7 +543,7 @@ public class DatabaseCore {
         DistrictTimeKey rangeStart = new DistrictTimeKey(districtCode, startTime, Integer.MIN_VALUE, null);
         DistrictTimeKey rangeEnd = new DistrictTimeKey(districtCode, asOfDate, Integer.MAX_VALUE, null);
         
-        List<DistrictTimeKey> keys = findInRange(districtPositiveIndex, rangeStart, rangeEnd);
+        List<DistrictTimeKey> keys = districtPositiveIndex.findInRange(rangeStart, rangeEnd);
         
         // Group by patient and keep the latest positive test per person
         Map<String, PCRTest> latestTestPerPerson = new HashMap<>();
@@ -589,7 +587,7 @@ public class DatabaseCore {
         RegionTimeKey rangeStart = new RegionTimeKey(regionCode, startTime, Integer.MIN_VALUE, null);
         RegionTimeKey rangeEnd = new RegionTimeKey(regionCode, asOfDate, Integer.MAX_VALUE, null);
         
-        List<RegionTimeKey> keys = findInRange(regionPositiveIndex, rangeStart, rangeEnd);
+        List<RegionTimeKey> keys = regionPositiveIndex.findInRange(rangeStart, rangeEnd);
         
         Map<String, PCRTest> latestTestPerPerson = new HashMap<>();
         for (RegionTimeKey key : keys) {
@@ -621,7 +619,7 @@ public class DatabaseCore {
         GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
         GlobalTimeKey rangeEnd = new GlobalTimeKey(asOfDate, Integer.MAX_VALUE, null);
         
-        List<GlobalTimeKey> keys = findInRange(globalPositiveIndex, rangeStart, rangeEnd);
+        List<GlobalTimeKey> keys = globalPositiveIndex.findInRange(rangeStart, rangeEnd);
         
         Map<String, PCRTest> latestTestPerPerson = new HashMap<>();
         for (GlobalTimeKey key : keys) {
@@ -653,7 +651,7 @@ public class DatabaseCore {
         GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
         GlobalTimeKey rangeEnd = new GlobalTimeKey(asOfDate, Integer.MAX_VALUE, null);
         
-        List<GlobalTimeKey> keys = findInRange(globalPositiveIndex, rangeStart, rangeEnd);
+        List<GlobalTimeKey> keys = globalPositiveIndex.findInRange(rangeStart, rangeEnd);
         
         // Group by district, then by patient, keeping highest test value per district
         Map<Integer, SickPersonRecord> sickestPerDistrict = new HashMap<>();
@@ -686,7 +684,7 @@ public class DatabaseCore {
         GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
         GlobalTimeKey rangeEnd = new GlobalTimeKey(asOfDate, Integer.MAX_VALUE, null);
         
-        List<GlobalTimeKey> keys = findInRange(globalPositiveIndex, rangeStart, rangeEnd);
+        List<GlobalTimeKey> keys = globalPositiveIndex.findInRange(rangeStart, rangeEnd);
         
         // Group by district and count unique patients
         Map<Integer, Map<String, PCRTest>> sickPerDistrict = new HashMap<>();
@@ -718,7 +716,7 @@ public class DatabaseCore {
         GlobalTimeKey rangeStart = new GlobalTimeKey(startTime, Integer.MIN_VALUE, null);
         GlobalTimeKey rangeEnd = new GlobalTimeKey(asOfDate, Integer.MAX_VALUE, null);
         
-        List<GlobalTimeKey> keys = findInRange(globalPositiveIndex, rangeStart, rangeEnd);
+        List<GlobalTimeKey> keys = globalPositiveIndex.findInRange(rangeStart, rangeEnd);
         
         // Group by region and count unique patients
         Map<Integer, Map<String, PCRTest>> sickPerRegion = new HashMap<>();
@@ -749,7 +747,7 @@ public class DatabaseCore {
         WorkplaceTimeKey rangeStart = new WorkplaceTimeKey(workplaceCode, startTime, Integer.MIN_VALUE, null);
         WorkplaceTimeKey rangeEnd = new WorkplaceTimeKey(workplaceCode, endTime, Integer.MAX_VALUE, null);
         
-        List<WorkplaceTimeKey> keys = findInRange(workplaceIndex, rangeStart, rangeEnd);
+        List<WorkplaceTimeKey> keys = workplaceIndex.findInRange(rangeStart, rangeEnd);
         
         for (WorkplaceTimeKey key : keys) {
             PCRTest test = key.getTest();
@@ -764,7 +762,19 @@ public class DatabaseCore {
     
     // 18. Search for a PCR test by its code.
     public TestDetailRecord searchPCRTestByCode(int testCode) {
-        return searchTestByCode(testCode);
+        PCRTest searchTest = new PCRTest();
+        searchTest.testCode = testCode;
+        PCRTest test = testMasterTree.find(searchTest);
+        
+        if (test == null) {
+            return null;
+        }
+        
+        Person searchPerson = new Person();
+        searchPerson.patientId = test.patientId;
+        Person person = personMasterTree.find(searchPerson);
+        
+        return new TestDetailRecord(test, person);
     }
     
     // 19. Insert a person into the system.
@@ -810,7 +820,7 @@ public class DatabaseCore {
         PatientTimeKey rangeStart = new PatientTimeKey(patientId, Long.MIN_VALUE, Integer.MIN_VALUE, null);
         PatientTimeKey rangeEnd = new PatientTimeKey(patientId, Long.MAX_VALUE, Integer.MAX_VALUE, null);
         
-        List<PatientTimeKey> keys = findInRange(patientHistoryIndex, rangeStart, rangeEnd);
+        List<PatientTimeKey> keys = patientHistoryIndex.findInRange(rangeStart, rangeEnd);
         
         for (PatientTimeKey key : keys) {
             PCRTest test = key.getTest();
@@ -822,5 +832,15 @@ public class DatabaseCore {
         personMasterTree.delete(person);
         
         return true;
+    }
+    
+    // ==================== Getters for UI Layer ====================
+    
+    public AVLTree<Person> getPersonMasterTree() {
+        return personMasterTree;
+    }
+    
+    public AVLTree<PCRTest> getTestMasterTree() {
+        return testMasterTree;
     }
 }

@@ -47,14 +47,4 @@ public class DistrictTimeKey implements TreeNodeData {
     public PCRTest getTest() {
         return test;
     }
-    
-    @Override
-    public byte[] ToByteArray() {
-        throw new UnsupportedOperationException("DistrictTimeKey is not serializable (RAM-only)");
-    }
-    
-    @Override
-    public void FromByteArray(byte[] inputArray) {
-        throw new UnsupportedOperationException("DistrictTimeKey is not serializable (RAM-only)");
-    }
 }
