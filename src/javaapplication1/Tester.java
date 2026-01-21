@@ -14,13 +14,13 @@ import java.util.TreeMap;
 public class Tester {
     
     // Test configuration constants
-    private static final int INSERTION_TEST_SIZE = 10_000;
-    private static final int DELETION_TEST_COUNT = 2_000;
-    private static final int SEARCH_TEST_COUNT = 5_000;
-    private static final int INTERVAL_SEARCH_TEST_COUNT = 1_000;
-    private static final int MIN_MAX_TEST_OPERATIONS = 2_000;
-    private static final int INCREASING_SEQUENCE_SIZE = 1_000;
-    private static final int RANDOMIZED_OPERATIONS_COUNT = 5_000;
+    private static final int INSERTION_TEST_SIZE = 30_000;
+    private static final int DELETION_TEST_COUNT = 5_000;
+    private static final int SEARCH_TEST_COUNT = 10_000;
+    private static final int INTERVAL_SEARCH_TEST_COUNT = 10_000;
+    private static final int MIN_MAX_TEST_OPERATIONS = 20_000;
+    private static final int INCREASING_SEQUENCE_SIZE = 10_000;
+    private static final int RANDOMIZED_OPERATIONS_COUNT = 25_000;
     private static final int INTERVAL_SEARCH_MIN_ELEMENTS = 50;
     
     // Randomized test probabilities (Test 7)

@@ -62,6 +62,7 @@ public class BSTree<T extends TreeNodeData> {
 
             if (parent == null) {
                 root = child;
+                child.setParent(null);  // FIX: Clear parent pointer when child becomes new root
                 return null;
             } else if (deletedSide == ChildSide.LEFT) {
                 parent.setLeftChild(child);
