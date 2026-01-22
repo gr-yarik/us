@@ -167,20 +167,6 @@ public class BSTree<T extends TreeNodeData> {
         RIGHT, LEFT;
     }
     
-    protected ChildSide getChildSide(BSTreeNode<T> node) {
-        if (node == null || node.getParent() == null) {
-            return null;
-        }
-        
-        if (node.getParent().getLeftChild() == node) {
-            return ChildSide.LEFT;
-        } else if (node.getParent().getRightChild() == node) {
-            return ChildSide.RIGHT;
-        }
-        
-        return null;
-    }
-    
     public record TryFindRecord<T extends TreeNodeData>(boolean found, BSTreeNode<T> searchStoppedAtNode, ChildSide side) {}
     
     protected TryFindRecord<T> tryFind(T key, Consumer<BSTreeNode<T>> operation){
@@ -388,10 +374,6 @@ public class BSTree<T extends TreeNodeData> {
         }
 
         return maxDepth;
-    }
-    
-    public boolean isEmpty() {
-        return root == null;
     }
     
     protected BSTreeNode getRoot() {

@@ -47,14 +47,6 @@ public class PatientTestCodeKey implements TreeNodeData {
         return Integer.compare(this.testCode, other.testCode);
     }
     
-    public String getPatientId() {
-        return patientId;
-    }
-    
-    public int getTestCode() {
-        return testCode;
-    }
-    
     public PCRTest getTest() {
         return test;
     }

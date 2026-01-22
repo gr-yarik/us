@@ -1,9 +1,5 @@
 package javaapplication1;
 
-import java.util.LinkedList;
-import java.util.Queue;
-
-import javaapplication1.BSTree.ChildSide;
 
 public class AVLTreeNode<T extends TreeNodeData> extends BSTreeNode<T> {
     
@@ -34,18 +30,5 @@ public class AVLTreeNode<T extends TreeNodeData> extends BSTreeNode<T> {
     
     public void setParent(AVLTreeNode<T> parent) {
         super.setParent(parent);
-    }
-
-    
-    public boolean isBalanced() {
-        return Math.abs(balance) <= 1;
-    }
-    
-    public boolean isLeftHeavy() {
-        return balance < 0;
-    }
-    
-    public boolean isRightHeavy() {
-        return balance > 0;
     }
 }

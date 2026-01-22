@@ -733,12 +733,12 @@ public class AVLUI extends JFrame {
         panel.add(rbViewQueryResults);
         
         btnReloadData = new JButton("Reload");
-        btnReloadData.addActionListener(e -> reloadData());
+        btnReloadData.addActionListener(e -> {reloadData(); queryResultsArea.setText("");});
         panel.add(btnReloadData);
         
         btnClearQueryResults = new JButton("Clear Query Results");
         btnClearQueryResults.addActionListener(e -> queryResultsArea.setText(""));
-        panel.add(btnClearQueryResults);
+        //panel.add(btnClearQueryResults);
         
         return panel;
     }

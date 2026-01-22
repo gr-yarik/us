@@ -46,14 +46,4 @@ public class RegionTimeKey implements TreeNodeData {
     public PCRTest getTest() {
         return test;
     }
-    
-    @Override
-    public byte[] ToByteArray() {
-        throw new UnsupportedOperationException("RegionTimeKey is not serializable");
-    }
-    
-    @Override
-    public void FromByteArray(byte[] inputArray) {
-        throw new UnsupportedOperationException("RegionTimeKey is not serializable");
-    }
 }
