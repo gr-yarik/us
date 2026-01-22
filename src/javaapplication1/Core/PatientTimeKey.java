@@ -30,7 +30,6 @@ public class PatientTimeKey implements TreeNodeData {
         }
         PatientTimeKey other = (PatientTimeKey) otherData;
         
-        // Compare order: patientId → timestamp → testCode
         int patientIdComparison = this.patientId.compareTo(other.patientId);
         if (patientIdComparison != 0) {
             return patientIdComparison;

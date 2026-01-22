@@ -30,7 +30,6 @@ public class RegionTimeKey implements TreeNodeData {
         }
         RegionTimeKey other = (RegionTimeKey) otherData;
         
-        // Compare order: regionCode → timestamp → testCode
         int regionComparison = Integer.compare(this.regionCode, other.regionCode);
         if (regionComparison != 0) {
             return regionComparison;
@@ -50,11 +49,11 @@ public class RegionTimeKey implements TreeNodeData {
     
     @Override
     public byte[] ToByteArray() {
-        throw new UnsupportedOperationException("RegionTimeKey is not serializable (RAM-only)");
+        throw new UnsupportedOperationException("RegionTimeKey is not serializable");
     }
     
     @Override
     public void FromByteArray(byte[] inputArray) {
-        throw new UnsupportedOperationException("RegionTimeKey is not serializable (RAM-only)");
+        throw new UnsupportedOperationException("RegionTimeKey is not serializable");
     }
 }

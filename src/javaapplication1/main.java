@@ -19,7 +19,7 @@ class PersonInfo implements TreeNodeData {
 
     @Override public String toString() {
         String displayName = name == null ? "<unknown>" : name+""+accountSavings;
-        return displayName ;//+ " : $" + String.format("%,.2f", accountSavings);
+        return displayName ;
     }
 
 }
@@ -28,7 +28,6 @@ public class main {
     public static void main(String[] args) {
 
         System.out.println("=== Testing BSTree Range Search ===");
-        //BSTree tree = new BSTree();
        
         AVLTree tree = new AVLTree();
 
@@ -36,9 +35,7 @@ public class main {
         tree.insert(new PersonInfo("Mato", 1.0));
         tree.insert(new PersonInfo("Vlad", 100_000_000.0));        
         tree.insert(new PersonInfo("Andy", 10_000.0));
-       // tree.printTree();
         tree.insert(new PersonInfo("Sara", 5_000.0));
-     //   tree.printTree();
         tree.insert(new PersonInfo("Jon", 50_000.0));
         tree.insert(new PersonInfo("Ken", 500.0));
         tree.insert(new PersonInfo("Jack", 900.0));
@@ -51,30 +48,9 @@ public class main {
 
         tree.printTree();
         tree.delete(entryToRemove);
-        // BSTreeNodeData found = tree.find(entryToFind);
-        // if (found != null) {
-        //     System.out.println("Found person with 10,000 savings: " + ((PersonInfo)found).name);
-        // } else {
-        //     System.out.println("No person found with 10,000 savings");
-        // }
         
        tree.printTree();
     
-    //    tree.inorderTraversal(data -> {
-    //     PersonInfo p = (PersonInfo) data;
-    //     System.out.println(p.name + " : $" + String.format("%,.2f", p.accountSavings));
-    //     return true; // continue traversing
-    // }
-    // );
-
-        // tree.inorderFromInclusive(entryToFind, data -> {
-        //     PersonInfo p = (PersonInfo) data;
-        //     System.out.println(p.name + " : $" + String.format("%,.2f", p.accountSavings));
-        //     return true; // continue traversing
-        // });
-
-       
-    //    System.out.println("\n=== Range Search Results ===");
        PersonInfo minKey = new PersonInfo(null, .0);
        PersonInfo maxKey = new PersonInfo(null, 50_000.0);
        
@@ -84,25 +60,6 @@ public class main {
            PersonInfo person = (PersonInfo) data;
            System.out.println("- " + person.name + ": $" + person.accountSavings);
        }
-//
-//        System.out.println("\n=== Testing AVLTree Range Search ===");
-//        AVLTree avlTree = new AVLTree();
-//        
-//        avlTree.insert(new PersonInfo("Alice", 2_000.0));
-//        avlTree.insert(new PersonInfo("Bob", 15_000.0));
-//        avlTree.insert(new PersonInfo("Charlie", 8_000.0));
-//        avlTree.insert(new PersonInfo("Diana", 25_000.0));
-//        avlTree.insert(new PersonInfo("Eve", 3_000.0));
-//
-//        PersonInfo avlMinKey = new PersonInfo(null, 5_000.0);
-//        PersonInfo avlMaxKey = new PersonInfo(null, 20_000.0);
-//        
-//        List<BSTreeNodeData> avlRangeResults = avlTree.findInRange(avlMinKey, avlMaxKey);
-//        System.out.println("People with savings between 5,000 and 20,000 (AVL Tree):");
-//        for (BSTreeNodeData data : avlRangeResults) {
-//            PersonInfo person = (PersonInfo) data;
-//            System.out.println("- " + person.name + ": $" + person.accountSavings);
-//        }
 
      }
 }

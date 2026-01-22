@@ -60,7 +60,6 @@ public class PCRTest implements TreeNodeData, SerializableData {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
         try {
-            // Write primitive fields
             dataOutputStream.writeInt(testCode);
             dataOutputStream.writeLong(timestamp);
             dataOutputStream.writeInt(workplaceCode);
@@ -69,12 +68,10 @@ public class PCRTest implements TreeNodeData, SerializableData {
             dataOutputStream.writeBoolean(testResult);
             dataOutputStream.writeDouble(testValue);
             
-            // Write patientId (length-prefixed)
             byte[] patientIdBytes = (patientId != null ? patientId : "").getBytes(StandardCharsets.UTF_8);
             dataOutputStream.writeInt(patientIdBytes.length);
             dataOutputStream.write(patientIdBytes);
             
-            // Write note (length-prefixed)
             byte[] noteBytes = (note != null ? note : "").getBytes(StandardCharsets.UTF_8);
             dataOutputStream.writeInt(noteBytes.length);
             dataOutputStream.write(noteBytes);
@@ -90,7 +87,6 @@ public class PCRTest implements TreeNodeData, SerializableData {
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(inputArray);
         DataInputStream dataInputStream = new DataInputStream(byteArrayInputStream);
         try {
-            // Read primitive fields
             this.testCode = dataInputStream.readInt();
             this.timestamp = dataInputStream.readLong();
             this.workplaceCode = dataInputStream.readInt();
@@ -99,13 +95,11 @@ public class PCRTest implements TreeNodeData, SerializableData {
             this.testResult = dataInputStream.readBoolean();
             this.testValue = dataInputStream.readDouble();
             
-            // Read patientId (length-prefixed)
             int patientIdLength = dataInputStream.readInt();
             byte[] patientIdBytes = new byte[patientIdLength];
             dataInputStream.readFully(patientIdBytes);
             this.patientId = new String(patientIdBytes, StandardCharsets.UTF_8);
             
-            // Read note (length-prefixed)
             int noteLength = dataInputStream.readInt();
             byte[] noteBytes = new byte[noteLength];
             dataInputStream.readFully(noteBytes);

@@ -39,13 +39,11 @@ public class PatientTestCodeKey implements TreeNodeData {
         
         PatientTestCodeKey other = (PatientTestCodeKey) otherData;
         
-        // First compare by patientId
         int patientIdComparison = this.patientId.compareTo(other.patientId);
         if (patientIdComparison != 0) {
             return patientIdComparison;
         }
         
-        // If patientId is equal, compare by testCode
         return Integer.compare(this.testCode, other.testCode);
     }
     

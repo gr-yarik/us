@@ -28,8 +28,6 @@ public class BSTree<T extends TreeNodeData> {
         if(result.found()) {
             delete(result.searchStoppedAtNode());
         } else {
-            // Suppress verbose output during testing
-            // System.out.println("Could not delete: " + data);
         }
         
     }
@@ -222,8 +220,6 @@ public class BSTree<T extends TreeNodeData> {
         if(record.found()) {
             return record.searchStoppedAtNode().getData();
         }
-        // Suppress verbose output during testing
-        // System.out.println("Key not found: " + key);
         return null;
     }
     

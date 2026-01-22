@@ -30,7 +30,6 @@ public class WorkplaceTimeKey implements TreeNodeData {
         }
         WorkplaceTimeKey other = (WorkplaceTimeKey) otherData;
         
-        // Compare order: workplaceCode → timestamp → testCode
         int workplaceComparison = Integer.compare(this.workplaceCode, other.workplaceCode);
         if (workplaceComparison != 0) {
             return workplaceComparison;

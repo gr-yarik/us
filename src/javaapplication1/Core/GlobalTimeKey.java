@@ -27,7 +27,6 @@ public class GlobalTimeKey implements TreeNodeData {
         }
         GlobalTimeKey other = (GlobalTimeKey) otherData;
         
-        // Compare order: timestamp → testCode
         int timestampComparison = Long.compare(this.timestamp, other.timestamp);
         if (timestampComparison != 0) {
             return timestampComparison;

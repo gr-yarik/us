@@ -30,7 +30,6 @@ public class DistrictTimeKey implements TreeNodeData {
         }
         DistrictTimeKey other = (DistrictTimeKey) otherData;
         
-        // Compare order: districtCode → timestamp → testCode
         int districtComparison = Integer.compare(this.districtCode, other.districtCode);
         if (districtComparison != 0) {
             return districtComparison;

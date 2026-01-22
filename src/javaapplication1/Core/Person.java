@@ -44,20 +44,16 @@ public class Person implements TreeNodeData, SerializableData {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
         try {
-            // Write birthdate
             dataOutputStream.writeLong(dateOfBirth);
             
-            // Write firstName (length-prefixed)
             byte[] firstNameBytes = (firstName != null ? firstName : "").getBytes(StandardCharsets.UTF_8);
             dataOutputStream.writeInt(firstNameBytes.length);
             dataOutputStream.write(firstNameBytes);
             
-            // Write lastName (length-prefixed)
             byte[] lastNameBytes = (lastName != null ? lastName : "").getBytes(StandardCharsets.UTF_8);
             dataOutputStream.writeInt(lastNameBytes.length);
             dataOutputStream.write(lastNameBytes);
             
-            // Write patientId (length-prefixed)
             byte[] patientIdBytes = (patientId != null ? patientId : "").getBytes(StandardCharsets.UTF_8);
             dataOutputStream.writeInt(patientIdBytes.length);
             dataOutputStream.write(patientIdBytes);
@@ -73,22 +69,18 @@ public class Person implements TreeNodeData, SerializableData {
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(inputArray);
         DataInputStream dataInputStream = new DataInputStream(byteArrayInputStream);
         try {
-            // Read birthdate
             this.dateOfBirth = dataInputStream.readLong();
             
-            // Read firstName (length-prefixed)
             int firstNameLength = dataInputStream.readInt();
             byte[] firstNameBytes = new byte[firstNameLength];
             dataInputStream.readFully(firstNameBytes);
             this.firstName = new String(firstNameBytes, StandardCharsets.UTF_8);
             
-            // Read lastName (length-prefixed)
             int lastNameLength = dataInputStream.readInt();
             byte[] lastNameBytes = new byte[lastNameLength];
             dataInputStream.readFully(lastNameBytes);
             this.lastName = new String(lastNameBytes, StandardCharsets.UTF_8);
             
-            // Read patientId (length-prefixed)
             int patientIdLength = dataInputStream.readInt();
             byte[] patientIdBytes = new byte[patientIdLength];
             dataInputStream.readFully(patientIdBytes);
