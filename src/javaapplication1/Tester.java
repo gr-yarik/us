@@ -250,23 +250,17 @@ public class Tester {
             IntegerData bstFound = bstTree.find(data);
             
             if (avlFound == null || avlFound.getValue() != data.getValue()) {
-                insertionFailures++;
-                if (insertionFailures == 1) { // Report first failure
-                    results.addFailure(testName, "Element " + data.getValue() + " not found in AVL tree after insertion");
-                }
+                throw new Error("Element " + data.getValue() + " not found in AVL tree after insertion");
             }
             
             if (bstFound == null || bstFound.getValue() != data.getValue()) {
-                insertionFailures++;
-                if (insertionFailures == 1) { // Report first failure
-                    results.addFailure(testName, "Element " + data.getValue() + " not found in BST after insertion");
-                }
+                throw new Error("Element " + data.getValue() + " not found in BST after insertion");
             }
             
             // Check balance factors every Nth insertion
             if ((i + 1) % BALANCE_CHECK_FREQUENCY == 0) {
                 if (!verifyAVLBalanceFactors(avlTree, results, testName, "insertion " + (i + 1))) {
-                    balanceFactorFailures++;
+                    throw new Error("AVL balance factor violation detected after insertion " + (i + 1));
                 }
             }
         }
@@ -311,7 +305,7 @@ public class Tester {
         
         // Final balance factor check
         if (!verifyAVLBalanceFactors(avlTree, results, testName, "all insertions")) {
-            balanceFactorFailures++;
+            throw new Error("AVL balance factor violation detected after all insertions");
         }
         
         boolean passed = avlMatch && bstMatch && insertionFailures == 0 && balanceFactorFailures == 0;
@@ -357,23 +351,17 @@ public class Tester {
             IntegerData bstFound = bstTree.find(data);
             
             if (avlFound != null) {
-                deletionFailures++;
-                if (deletionFailures == 1) {
-                    results.addFailure(testName, "Element " + data.getValue() + " still found in AVL tree after deletion");
-                }
+                throw new Error("Element " + data.getValue() + " still found in AVL tree after deletion");
             }
             
             if (bstFound != null) {
-                deletionFailures++;
-                if (deletionFailures == 1) {
-                    results.addFailure(testName, "Element " + data.getValue() + " still found in BST after deletion");
-                }
+                throw new Error("Element " + data.getValue() + " still found in BST after deletion");
             }
             
             // Check balance factors every Nth deletion
             if ((i + 1) % BALANCE_CHECK_FREQUENCY == 0) {
                 if (!verifyAVLBalanceFactors(avlTree, results, testName, "deletion " + (i + 1))) {
-                    balanceFactorFailures++;
+                    throw new Error("AVL balance factor violation detected after deletion " + (i + 1));
                 }
             }
         }
@@ -418,7 +406,7 @@ public class Tester {
         
         // Final balance factor check
         if (!verifyAVLBalanceFactors(avlTree, results, testName, "all deletions")) {
-            balanceFactorFailures++;
+            throw new Error("AVL balance factor violation detected after all deletions");
         }
         
         boolean passed = avlMatch && bstMatch && deletionFailures == 0 && balanceFactorFailures == 0;
@@ -463,17 +451,11 @@ public class Tester {
             boolean bstFound = bstResult != null && bstResult.getValue() == searchKey.getValue();
             
             if (inHelper && !avlFound) {
-                searchFailures++;
-                if (searchFailures == 1) {
-                    results.addFailure(testName, "Element " + searchKey.getValue() + " found in helper but missing in AVL tree");
-                }
+                throw new Error("Element " + searchKey.getValue() + " found in helper but missing in AVL tree");
             }
             
             if (inHelper && !bstFound) {
-                searchFailures++;
-                if (searchFailures == 1) {
-                    results.addFailure(testName, "Element " + searchKey.getValue() + " found in helper but missing in BST");
-                }
+                throw new Error("Element " + searchKey.getValue() + " found in helper but missing in BST");
             }
         }
         
@@ -488,17 +470,11 @@ public class Tester {
                 IntegerData bstResult = bstTree.find(searchKey);
                 
                 if (avlResult != null) {
-                    searchFailures++;
-                    if (searchFailures == 1) {
-                        results.addFailure(testName, "Non-existent element " + nonExistentValue + " found in AVL tree (should be null)");
-                    }
+                    throw new Error("Non-existent element " + nonExistentValue + " found in AVL tree (should be null)");
                 }
                 
                 if (bstResult != null) {
-                    searchFailures++;
-                    if (searchFailures == 1) {
-                        results.addFailure(testName, "Non-existent element " + nonExistentValue + " found in BST (should be null)");
-                    }
+                    throw new Error("Non-existent element " + nonExistentValue + " found in BST (should be null)");
                 }
             }
         }
@@ -571,27 +547,17 @@ public class Tester {
             
             // Verify correctness
             if (avlValues.size() != expected.size()) {
-                rangeSearchFailures++;
-                if (rangeSearchFailures == 1) {
-                    results.addFailure(testName, "AVL range search size mismatch: expected " + expected.size() + ", got " + avlValues.size() + " for range [" + a.getValue() + ", " + b.getValue() + "]");
-                }
+                throw new Error("AVL range search size mismatch: expected " + expected.size() + ", got " + avlValues.size() + " for range [" + a.getValue() + ", " + b.getValue() + "]");
             }
             
             if (bstValues.size() != expected.size()) {
-                rangeSearchFailures++;
-                if (rangeSearchFailures == 1) {
-                    results.addFailure(testName, "BST range search size mismatch: expected " + expected.size() + ", got " + bstValues.size() + " for range [" + a.getValue() + ", " + b.getValue() + "]");
-                }
+                throw new Error("BST range search size mismatch: expected " + expected.size() + ", got " + bstValues.size() + " for range [" + a.getValue() + ", " + b.getValue() + "]");
             }
             
             if (avlValues.size() == expected.size()) {
                 for (int j = 0; j < expected.size(); j++) {
                     if (!avlValues.get(j).equals(expected.get(j))) {
-                        rangeSearchFailures++;
-                        if (rangeSearchFailures == 1) {
-                            results.addFailure(testName, "AVL range search content mismatch at position " + j + " for range [" + a.getValue() + ", " + b.getValue() + "]");
-                        }
-                        break;
+                        throw new Error("AVL range search content mismatch at position " + j + " for range [" + a.getValue() + ", " + b.getValue() + "]");
                     }
                 }
             }
@@ -599,11 +565,7 @@ public class Tester {
             if (bstValues.size() == expected.size()) {
                 for (int j = 0; j < expected.size(); j++) {
                     if (!bstValues.get(j).equals(expected.get(j))) {
-                        rangeSearchFailures++;
-                        if (rangeSearchFailures == 1) {
-                            results.addFailure(testName, "BST range search content mismatch at position " + j + " for range [" + a.getValue() + ", " + b.getValue() + "]");
-                        }
-                        break;
+                        throw new Error("BST range search content mismatch at position " + j + " for range [" + a.getValue() + ", " + b.getValue() + "]");
                     }
                 }
             }
@@ -668,31 +630,19 @@ public class Tester {
             int bstMaxValue = bstMax != null ? bstMax.getValue() : 0;
             
             if (avlMinValue != expectedMin) {
-                minMaxFailures++;
-                if (minMaxFailures == 1) {
-                    results.addFailure(testName, "AVL min mismatch: expected " + expectedMin + ", got " + avlMinValue);
-                }
+                throw new Error("AVL min mismatch: expected " + expectedMin + ", got " + avlMinValue);
             }
             
             if (avlMaxValue != expectedMax) {
-                minMaxFailures++;
-                if (minMaxFailures == 1) {
-                    results.addFailure(testName, "AVL max mismatch: expected " + expectedMax + ", got " + avlMaxValue);
-                }
+                throw new Error("AVL max mismatch: expected " + expectedMax + ", got " + avlMaxValue);
             }
             
             if (bstMinValue != expectedMin) {
-                minMaxFailures++;
-                if (minMaxFailures == 1) {
-                    results.addFailure(testName, "BST min mismatch: expected " + expectedMin + ", got " + bstMinValue);
-                }
+                throw new Error("BST min mismatch: expected " + expectedMin + ", got " + bstMinValue);
             }
             
             if (bstMaxValue != expectedMax) {
-                minMaxFailures++;
-                if (minMaxFailures == 1) {
-                    results.addFailure(testName, "BST max mismatch: expected " + expectedMax + ", got " + bstMaxValue);
-                }
+                throw new Error("BST max mismatch: expected " + expectedMax + ", got " + bstMaxValue);
             }
             
             if (minMaxFailures > 0) break;
@@ -735,23 +685,17 @@ public class Tester {
             IntegerData bstFound = bstTree.find(data);
             
             if (avlFound == null || avlFound.getValue() != data.getValue()) {
-                insertionFailures++;
-                if (insertionFailures == 1) {
-                    results.addFailure(testName, "Element " + data.getValue() + " not found in AVL tree after insertion");
-                }
+                throw new Error("Element " + data.getValue() + " not found in AVL tree after insertion");
             }
             
             if (bstFound == null || bstFound.getValue() != data.getValue()) {
-                insertionFailures++;
-                if (insertionFailures == 1) {
-                    results.addFailure(testName, "Element " + data.getValue() + " not found in BST after insertion");
-                }
+                throw new Error("Element " + data.getValue() + " not found in BST after insertion");
             }
             
             // Check balance factors every Nth insertion
             if ((i + 1) % BALANCE_CHECK_FREQUENCY == 0) {
                 if (!verifyAVLBalanceFactors(avlTree, results, testName, "insertion " + (i + 1))) {
-                    balanceFactorFailures++;
+                    throw new Error("AVL balance factor violation detected after insertion " + (i + 1));
                 }
             }
         }
@@ -795,7 +739,7 @@ public class Tester {
         
         // Final balance factor check
         if (!verifyAVLBalanceFactors(avlTree, results, testName, "all insertions")) {
-            balanceFactorFailures++;
+            throw new Error("AVL balance factor violation detected after all insertions");
         }
         
         boolean passed = avlCorrect && bstCorrect && insertionFailures == 0 && balanceFactorFailures == 0;
@@ -840,10 +784,7 @@ public class Tester {
                     // Verify insertion
                     IntegerData avlFound = avlTree.find(data);
                     if (avlFound == null || avlFound.getValue() != value) {
-                        operationFailures++;
-                        if (operationFailures == 1) {
-                            results.addFailure(testName, "Insertion verification failed for value " + value);
-                        }
+                        throw new Error("Insertion verification failed for value " + value);
                     }
                 }
             } else if (operation < RANDOMIZED_TEST1_INSERT_PROB + RANDOMIZED_TEST1_DELETE_PROB) {
@@ -858,10 +799,7 @@ public class Tester {
                     // Verify deletion
                     IntegerData avlFound = avlTree.find(data);
                     if (avlFound != null) {
-                        operationFailures++;
-                        if (operationFailures == 1) {
-                            results.addFailure(testName, "Deletion verification failed for value " + data.getValue());
-                        }
+                        throw new Error("Deletion verification failed for value " + data.getValue());
                     }
                 }
             } else {
@@ -875,10 +813,7 @@ public class Tester {
                         IntegerData bstResult = bstTree.find(data);
                         
                         if (avlResult == null || avlResult.getValue() != data.getValue()) {
-                            operationFailures++;
-                            if (operationFailures == 1) {
-                                results.addFailure(testName, "Search failed for existing element " + data.getValue());
-                            }
+                            throw new Error("Search failed for existing element " + data.getValue());
                         }
                     }
                 } else {
@@ -892,10 +827,7 @@ public class Tester {
                     IntegerData bstResult = bstTree.find(data);
                     
                     if (avlResult != null) {
-                        operationFailures++;
-                        if (operationFailures == 1) {
-                            results.addFailure(testName, "Non-existent element " + value + " found in AVL tree");
-                        }
+                        throw new Error("Non-existent element " + value + " found in AVL tree");
                     }
                 }
             }
@@ -903,7 +835,7 @@ public class Tester {
             // Check balance factors every Nth operation
             if ((i + 1) % BALANCE_CHECK_FREQUENCY == 0) {
                 if (!verifyAVLBalanceFactors(avlTree, results, testName, "operation " + (i + 1))) {
-                    balanceFactorFailures++;
+                    throw new Error("AVL balance factor violation detected after operation " + (i + 1));
                 }
             }
         }
@@ -913,16 +845,13 @@ public class Tester {
         for (IntegerData data : helperStructure) {
             IntegerData avlFound = avlTree.find(data);
             if (avlFound == null || avlFound.getValue() != data.getValue()) {
-                operationFailures++;
-                if (operationFailures == 1) {
-                    results.addFailure(testName, "Final state verification failed: element " + data.getValue() + " missing");
-                }
+                throw new Error("Final state verification failed: element " + data.getValue() + " missing");
             }
         }
         
         // Final balance factor check
         if (!verifyAVLBalanceFactors(avlTree, results, testName, "all operations")) {
-            balanceFactorFailures++;
+            throw new Error("AVL balance factor violation detected after all operations");
         }
         
         System.out.println("Final helper structure size: " + helperStructure.size());
@@ -969,10 +898,7 @@ public class Tester {
                     // Verify insertion
                     IntegerData avlFound = avlTree.find(data);
                     if (avlFound == null || avlFound.getValue() != value) {
-                        operationFailures++;
-                        if (operationFailures == 1) {
-                            results.addFailure(testName, "Insertion verification failed for value " + value);
-                        }
+                        throw new Error("Insertion verification failed for value " + value);
                     }
                 }
             } else if (operation < RANDOMIZED_TEST2_INSERT_PROB + RANDOMIZED_TEST2_DELETE_PROB) {
@@ -1023,10 +949,7 @@ public class Tester {
                     IntegerData bstResult = bstTree.find(data);
                     
                     if (avlResult != null) {
-                        operationFailures++;
-                        if (operationFailures == 1) {
-                            results.addFailure(testName, "Non-existent element " + value + " found in AVL tree");
-                        }
+                        throw new Error("Non-existent element " + value + " found in AVL tree");
                     }
                 }
             }
@@ -1034,7 +957,7 @@ public class Tester {
             // Check balance factors every Nth operation
             if ((i + 1) % BALANCE_CHECK_FREQUENCY == 0) {
                 if (!verifyAVLBalanceFactors(avlTree, results, testName, "operation " + (i + 1))) {
-                    balanceFactorFailures++;
+                    throw new Error("AVL balance factor violation detected after operation " + (i + 1));
                 }
             }
         }
@@ -1044,16 +967,13 @@ public class Tester {
         for (IntegerData data : helperStructure) {
             IntegerData avlFound = avlTree.find(data);
             if (avlFound == null || avlFound.getValue() != data.getValue()) {
-                operationFailures++;
-                if (operationFailures == 1) {
-                    results.addFailure(testName, "Final state verification failed: element " + data.getValue() + " missing");
-                }
+                throw new Error("Final state verification failed: element " + data.getValue() + " missing");
             }
         }
         
         // Final balance factor check
         if (!verifyAVLBalanceFactors(avlTree, results, testName, "all operations")) {
-            balanceFactorFailures++;
+            throw new Error("AVL balance factor violation detected after all operations");
         }
         
         System.out.println("Final helper structure size: " + helperStructure.size());
@@ -1113,23 +1033,17 @@ public class Tester {
             IntegerData treeMapFound = treeMap.get(data.getValue());
             
             if (avlFound == null || avlFound.getValue() != data.getValue()) {
-                insertionFailures++;
-                if (insertionFailures == 1) {
-                    results.addFailure(testName, "Element " + data.getValue() + " not found in AVL tree after insertion");
-                }
+                throw new Error("Element " + data.getValue() + " not found in AVL tree after insertion");
             }
             
             if (treeMapFound == null || treeMapFound.getValue() != data.getValue()) {
-                insertionFailures++;
-                if (insertionFailures == 1) {
-                    results.addFailure(testName, "Element " + data.getValue() + " not found in TreeMap after insertion");
-                }
+                throw new Error("Element " + data.getValue() + " not found in TreeMap after insertion");
             }
             
             // Check balance factors every Nth insertion
             if ((i + 1) % BALANCE_CHECK_FREQUENCY == 0) {
                 if (!verifyAVLBalanceFactors(avlTree, results, testName, "insertion " + (i + 1))) {
-                    balanceFactorFailures++;
+                    throw new Error("AVL balance factor violation detected after insertion " + (i + 1));
                 }
             }
         }
@@ -1174,7 +1088,7 @@ public class Tester {
         
         // Final balance factor check
         if (!verifyAVLBalanceFactors(avlTree, results, testName, "all insertions")) {
-            balanceFactorFailures++;
+            throw new Error("AVL balance factor violation detected after all insertions");
         }
         
         boolean passed = avlMatch && treeMapMatch && insertionFailures == 0 && balanceFactorFailures == 0;
@@ -1227,23 +1141,17 @@ public class Tester {
             IntegerData treeMapFound = treeMap.get(data.getValue());
             
             if (avlFound != null) {
-                deletionFailures++;
-                if (deletionFailures == 1) {
-                    results.addFailure(testName, "Element " + data.getValue() + " still found in AVL tree after deletion");
-                }
+                throw new Error("Element " + data.getValue() + " still found in AVL tree after deletion");
             }
             
             if (treeMapFound != null) {
-                deletionFailures++;
-                if (deletionFailures == 1) {
-                    results.addFailure(testName, "Element " + data.getValue() + " still found in TreeMap after deletion");
-                }
+                throw new Error("Element " + data.getValue() + " still found in TreeMap after deletion");
             }
             
             // Check balance factors every Nth deletion
             if ((i + 1) % BALANCE_CHECK_FREQUENCY == 0) {
                 if (!verifyAVLBalanceFactors(avlTree, results, testName, "deletion " + (i + 1))) {
-                    balanceFactorFailures++;
+                    throw new Error("AVL balance factor violation detected after deletion " + (i + 1));
                 }
             }
         }
@@ -1288,7 +1196,7 @@ public class Tester {
         
         // Final balance factor check
         if (!verifyAVLBalanceFactors(avlTree, results, testName, "all deletions")) {
-            balanceFactorFailures++;
+            throw new Error("AVL balance factor violation detected after all deletions");
         }
         
         boolean passed = avlMatch && treeMapMatch && deletionFailures == 0 && balanceFactorFailures == 0;
@@ -1343,17 +1251,11 @@ public class Tester {
             boolean treeMapFound = treeMapResult != null && treeMapResult.getValue() == searchKey.getValue();
             
             if (inHelper && !avlFound) {
-                searchFailures++;
-                if (searchFailures == 1) {
-                    results.addFailure(testName, "Element " + searchKey.getValue() + " found in helper but missing in AVL tree");
-                }
+                throw new Error("Element " + searchKey.getValue() + " found in helper but missing in AVL tree");
             }
             
             if (inHelper && !treeMapFound) {
-                searchFailures++;
-                if (searchFailures == 1) {
-                    results.addFailure(testName, "Element " + searchKey.getValue() + " found in helper but missing in TreeMap");
-                }
+                throw new Error("Element " + searchKey.getValue() + " found in helper but missing in TreeMap");
             }
         }
         
@@ -1368,17 +1270,11 @@ public class Tester {
                 IntegerData treeMapResult = treeMap.get(nonExistentValue);
                 
                 if (avlResult != null) {
-                    searchFailures++;
-                    if (searchFailures == 1) {
-                        results.addFailure(testName, "Non-existent element " + nonExistentValue + " found in AVL tree (should be null)");
-                    }
+                    throw new Error("Non-existent element " + nonExistentValue + " found in AVL tree (should be null)");
                 }
                 
                 if (treeMapResult != null) {
-                    searchFailures++;
-                    if (searchFailures == 1) {
-                        results.addFailure(testName, "Non-existent element " + nonExistentValue + " found in TreeMap (should be null)");
-                    }
+                    throw new Error("Non-existent element " + nonExistentValue + " found in TreeMap (should be null)");
                 }
             }
         }
@@ -1457,27 +1353,17 @@ public class Tester {
             
             // Verify correctness
             if (avlValues.size() != expected.size()) {
-                rangeSearchFailures++;
-                if (rangeSearchFailures == 1) {
-                    results.addFailure(testName, "AVL range search size mismatch: expected " + expected.size() + ", got " + avlValues.size() + " for range [" + a.getValue() + ", " + b.getValue() + "]");
-                }
+                throw new Error("AVL range search size mismatch: expected " + expected.size() + ", got " + avlValues.size() + " for range [" + a.getValue() + ", " + b.getValue() + "]");
             }
             
             if (treeMapValues.size() != expected.size()) {
-                rangeSearchFailures++;
-                if (rangeSearchFailures == 1) {
-                    results.addFailure(testName, "TreeMap range search size mismatch: expected " + expected.size() + ", got " + treeMapValues.size() + " for range [" + a.getValue() + ", " + b.getValue() + "]");
-                }
+                throw new Error("TreeMap range search size mismatch: expected " + expected.size() + ", got " + treeMapValues.size() + " for range [" + a.getValue() + ", " + b.getValue() + "]");
             }
             
             if (avlValues.size() == expected.size()) {
                 for (int j = 0; j < expected.size(); j++) {
                     if (!avlValues.get(j).equals(expected.get(j))) {
-                        rangeSearchFailures++;
-                        if (rangeSearchFailures == 1) {
-                            results.addFailure(testName, "AVL range search content mismatch at position " + j + " for range [" + a.getValue() + ", " + b.getValue() + "]");
-                        }
-                        break;
+                        throw new Error("AVL range search content mismatch at position " + j + " for range [" + a.getValue() + ", " + b.getValue() + "]");
                     }
                 }
             }
@@ -1485,11 +1371,7 @@ public class Tester {
             if (treeMapValues.size() == expected.size()) {
                 for (int j = 0; j < expected.size(); j++) {
                     if (!treeMapValues.get(j).equals(expected.get(j))) {
-                        rangeSearchFailures++;
-                        if (rangeSearchFailures == 1) {
-                            results.addFailure(testName, "TreeMap range search content mismatch at position " + j + " for range [" + a.getValue() + ", " + b.getValue() + "]");
-                        }
-                        break;
+                        throw new Error("TreeMap range search content mismatch at position " + j + " for range [" + a.getValue() + ", " + b.getValue() + "]");
                     }
                 }
             }
